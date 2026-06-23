@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  createdGroups  Group[]        @relation("GroupCreator")
+  groupMembers   GroupMember[]
+  expensesPaid   Expense[]      @relation("ExpensePayer")
+  expenseSplits  ExpenseSplit[]
+
+  @@map("users")
+}
+
+model Group {
+  id              String   @id @default(cuid())
+  name            String
+  createdByUserId String   @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  createdBy User          @relation("GroupCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  members   GroupMember[]
+  expenses  Expense[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  groupId String @map("group_id")
+  userId  String @map("user_id")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@map("group_members")
+}
+
+model Expense {
+  id              String   @id @default(cuid())
+  groupId         String   @map("group_id")
+  description     String
+  amount          Int
+  paidByUserId    String   @map("paid_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  group    Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy   User           @relation("ExpensePayer", fields: [paidByUserId], references: [id], onDelete: Restrict)
+  splits   ExpenseSplit[]
+
+  @@map("expenses")
+}
+
+model ExpenseSplit {
+  expenseId  String @map("expense_id")
+  userId     String @map("user_id")
+  amountOwed Int    @map("amount_owed")
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([expenseId, userId])
+  @@map("expense_splits")
+}
