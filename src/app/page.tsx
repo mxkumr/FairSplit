@@ -12,8 +12,17 @@ import { Input } from "@/components/ui/input";
 import { useBalances, useGroups } from "@/hooks/use-api";
 
 export default function DashboardPage() {
-  const { data: groupsData, isLoading: groupsLoading } = useGroups();
-  const { data: balances, isLoading: balancesLoading } = useBalances();
+  const {
+    data: groupsData,
+    isLoading: groupsLoading,
+    isError: groupsError,
+    error: groupsErr,
+  } = useGroups();
+  const {
+    data: balances,
+    isLoading: balancesLoading,
+    isError: balancesError,
+  } = useBalances();
   const [search, setSearch] = useState("");
 
   const isLoading = groupsLoading || balancesLoading;
@@ -36,12 +45,20 @@ export default function DashboardPage() {
   }, [groups, search]);
 
   const featuredGroup =
-    filteredGroups.find((g) => g.isFavorite) ??
-    [...filteredGroups].sort((a, b) => b._count.expenses - a._count.expenses)[0];
+    filteredGroups.length > 1
+      ? (filteredGroups.find((g) => g.isFavorite) ??
+        [...filteredGroups].sort((a, b) => b._count.expenses - a._count.expenses)[0])
+      : undefined;
 
-  const ongoingGroups = filteredGroups
-    .filter((g) => g.id !== featuredGroup?.id)
-    .filter((g) => (balanceMap.get(g.id) ?? 0) !== 0 || g._count.expenses > 0);
+  const listGroups = featuredGroup
+    ? filteredGroups.filter((g) => g.id !== featuredGroup.id)
+    : filteredGroups;
+
+  const hasZeroBalances =
+    balances &&
+    balances.totalOwed === 0 &&
+    balances.totalOwing === 0 &&
+    groups.length > 0;
 
   return (
     <AppShell>
@@ -75,9 +92,26 @@ export default function DashboardPage() {
             <div className="h-64 animate-pulse rounded-3xl bg-muted" />
             <div className="h-24 animate-pulse rounded-3xl bg-muted" />
           </div>
+        ) : groupsError ? (
+          <div className="rounded-3xl bg-card py-12 text-center shadow-soft border border-border">
+            <p className="font-semibold">Could not load your groups</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {groupsErr instanceof Error ? groupsErr.message : "Try logging out and back in."}
+            </p>
+            <Button asChild variant="outline" className="mt-4">
+              <Link href="/login">Go to login</Link>
+            </Button>
+          </div>
         ) : (
           <>
-            {balances && <BalanceSummary balances={balances} />}
+            {balances && !balancesError && <BalanceSummary balances={balances} />}
+
+            {hasZeroBalances && (
+              <p className="text-sm text-muted-foreground rounded-2xl bg-muted/50 px-4 py-3">
+                Balances are $0 because you are the only member, or everyone is settled up.
+                Add friends to a group to split expenses together.
+              </p>
+            )}
 
             {featuredGroup && (
               <section>
@@ -87,7 +121,7 @@ export default function DashboardPage() {
                     href="/groups/new"
                     className="text-sm font-semibold text-muted-foreground hover:text-foreground"
                   >
-                    See all
+                    New group
                   </Link>
                 </div>
                 <FeaturedGroupCard
@@ -97,16 +131,24 @@ export default function DashboardPage() {
               </section>
             )}
 
-            {ongoingGroups.length > 0 && (
+            {listGroups.length > 0 && (
               <section>
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-bold">Ongoing Splits</h2>
-                  <span className="text-sm text-muted-foreground">
-                    {ongoingGroups.length} active
-                  </span>
+                  <h2 className="text-lg font-bold">
+                    Your Groups
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      ({listGroups.length})
+                    </span>
+                  </h2>
+                  <Link
+                    href="/groups/new"
+                    className="text-sm font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    New group
+                  </Link>
                 </div>
                 <div className="grid gap-4 lg:grid-cols-2">
-                  {ongoingGroups.map((group) => (
+                  {listGroups.map((group) => (
                     <OngoingSplitCard
                       key={group.id}
                       group={group}

@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum SplitMode {
@@ -33,12 +34,14 @@ enum ActivityType {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(cuid())
+  name            String
+  email           String    @unique
+  passwordHash    String    @map("password_hash")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  friendInviteToken String? @unique @map("friend_invite_token")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   createdGroups  Group[]        @relation("GroupCreator")
   groupMembers   GroupMember[]
@@ -51,6 +54,19 @@ model User {
   activities     Activity[]
 
   @@map("users")
+}
+
+model EmailOtp {
+  id        String   @id @default(cuid())
+  email     String
+  codeHash  String   @map("code_hash")
+  purpose   String   @default("REGISTER")
+  attempts  Int      @default(0)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email, purpose])
+  @@map("email_otps")
 }
 
 model Friendship {
@@ -81,6 +97,7 @@ model Group {
   information     String?
   currency        String   @default("USD")
   currencySymbol  String   @default("$") @map("currency_symbol")
+  inviteToken     String?  @unique @map("invite_token")
   createdByUserId String   @map("created_by")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")

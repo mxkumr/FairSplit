@@ -2,12 +2,16 @@ import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { getJwtSecret, getSessionCookieName } from "@/lib/auth-config";
 
-const publicPaths = ["/login", "/register"];
+const publicPaths = ["/login", "/register", "/verify-email", "/join", "/add-friend"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/api/auth") || pathname.startsWith("/api/health")) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/api/invites")) {
     return NextResponse.next();
   }
 
@@ -29,7 +33,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAuthenticated && isPublic) {
-    return NextResponse.redirect(new URL("/", request.url));
+    const allowedWhenAuthed = ["/verify-email", "/join", "/add-friend"];
+    if (!allowedWhenAuthed.some((path) => pathname.startsWith(path))) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   return NextResponse.next();

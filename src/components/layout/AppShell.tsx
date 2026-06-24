@@ -127,11 +127,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-1">
             <ThemeToggle />
             {data?.user && (
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  {getInitials(data.user.name)}
-                </AvatarFallback>
-              </Avatar>
+              <Link
+                href="/friends"
+                className={cn(
+                  "rounded-full transition-opacity hover:opacity-80",
+                  pathname.startsWith("/friends") && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                )}
+                aria-label="Open profile"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {getInitials(data.user.name)}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
             )}
           </div>
         </header>

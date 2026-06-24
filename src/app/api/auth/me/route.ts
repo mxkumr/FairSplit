@@ -12,14 +12,21 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, emailVerifiedAt: true },
     });
 
     if (!user) {
       return jsonError("Unauthorized", 401);
     }
 
-    return NextResponse.json({ user });
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        emailVerified: !!user.emailVerifiedAt,
+      },
+    });
   } catch (error) {
     return handleApiError(error);
   }

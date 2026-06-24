@@ -76,6 +76,7 @@ export function useMe() {
   return useQuery({
     queryKey: ["me"],
     queryFn: () => api.me(),
+    retry: false,
   });
 }
 
@@ -158,8 +159,23 @@ export function useCreateGroup() {
 export function useAddGroupMember(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: { email: string }) => api.addGroupMember(groupId, body),
+    mutationFn: (body: { email?: string; userId?: string }) => api.addGroupMember(groupId, body),
     onSuccess: () => invalidateGroup(queryClient, groupId),
+  });
+}
+
+export function useGroupInvite(groupId: string) {
+  return useQuery({
+    queryKey: ["groups", groupId, "invite"],
+    queryFn: () => api.getGroupInvite(groupId),
+    enabled: !!groupId,
+  });
+}
+
+export function useFriendInvite() {
+  return useQuery({
+    queryKey: ["friend-invite"],
+    queryFn: () => api.getFriendInvite(),
   });
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { handleApiError, jsonError } from "@/lib/api-helpers";
+import { createMutualFriendship } from "@/lib/friendship";
 import { prisma } from "@/lib/prisma";
 import { addFriendSchema } from "@/lib/validations/friend";
 
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
     }
 
     const friend = await prisma.user.findUnique({
-      where: { email: parsed.data.email },
+      where: { email: parsed.data.email.trim().toLowerCase() },
       select: { id: true, name: true, email: true },
     });
 
@@ -47,35 +48,21 @@ export async function POST(request: Request) {
       return jsonError("No user found with that email", 404);
     }
 
-    if (friend.id === session.userId) {
-      return jsonError("You cannot add yourself as a friend", 400);
+    try {
+      const result = await createMutualFriendship(session.userId, friend.id);
+      if (!result.created) {
+        return jsonError("Already friends", 409);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message === "SELF_FRIEND") {
+        return jsonError("You cannot add yourself as a friend", 400);
+      }
+      throw error;
     }
 
-    const existing = await prisma.friendship.findUnique({
-      where: {
-        userId_friendId: { userId: session.userId, friendId: friend.id },
-      },
-    });
-
-    if (existing) {
-      return jsonError("Already friends", 409);
-    }
-
-    const friendship = await prisma.$transaction(async (tx) => {
-      await tx.friendship.create({
-        data: { userId: session.userId, friendId: friend.id },
-      });
-      await tx.friendship.upsert({
-        where: {
-          userId_friendId: { userId: friend.id, friendId: session.userId },
-        },
-        create: { userId: friend.id, friendId: session.userId },
-        update: {},
-      });
-      return tx.friendship.findFirstOrThrow({
-        where: { userId: session.userId, friendId: friend.id },
-        include: { friend: { select: { id: true, name: true, email: true } } },
-      });
+    const friendship = await prisma.friendship.findFirstOrThrow({
+      where: { userId: session.userId, friendId: friend.id },
+      include: { friend: { select: { id: true, name: true, email: true } } },
     });
 
     return NextResponse.json(

@@ -1,15 +1,17 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthFooterLink, AuthLayout } from "@/components/layout/AuthLayout";
 import { api } from "@/lib/api-client";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,9 +24,15 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await api.register({ name, email, password });
-      router.push("/");
-      router.refresh();
+      const result = await api.register({ name, email, password });
+      const params = new URLSearchParams({ email: result.email });
+      if (result.devCode) {
+        params.set("devCode", result.devCode);
+      }
+      if (next) {
+        params.set("next", next);
+      }
+      router.push(`/verify-email?${params.toString()}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -32,13 +40,15 @@ export default function RegisterPage() {
     }
   }
 
+  const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
+
   return (
     <AuthLayout
       title="Create account"
       subtitle="Get started with FairSplit for free"
       footer={
         <>
-          Already have an account? <AuthFooterLink href="/login">Sign in</AuthFooterLink>
+          Already have an account? <AuthFooterLink href={loginHref}>Sign in</AuthFooterLink>
         </>
       }
     >
@@ -74,5 +84,13 @@ export default function RegisterPage() {
         </Button>
       </form>
     </AuthLayout>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <RegisterForm />
+    </Suspense>
   );
 }

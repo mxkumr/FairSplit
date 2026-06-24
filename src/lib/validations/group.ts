@@ -15,9 +15,14 @@ export const updateGroupSchema = z.object({
   currencySymbol: z.string().max(5).optional(),
 });
 
-export const addMemberSchema = z.object({
-  email: z.string().email("Invalid email address"),
-});
+export const addMemberSchema = z
+  .object({
+    email: z.string().email("Invalid email address").optional(),
+    userId: z.string().min(1).optional(),
+  })
+  .refine((data) => data.email || data.userId, {
+    message: "Email or user ID is required",
+  });
 
 export const recordPaymentSchema = z.object({
   fromUserId: z.string().min(1),

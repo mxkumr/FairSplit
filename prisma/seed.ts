@@ -6,22 +6,39 @@ const prisma = new PrismaClient();
 async function main() {
   const passwordHash = await bcrypt.hash("password123", 12);
 
+  const verifiedAt = new Date();
+
   const alice = await prisma.user.upsert({
     where: { email: "alice@example.com" },
-    update: {},
-    create: { name: "Alice", email: "alice@example.com", passwordHash },
+    update: { emailVerifiedAt: verifiedAt },
+    create: {
+      name: "Alice",
+      email: "alice@example.com",
+      passwordHash,
+      emailVerifiedAt: verifiedAt,
+    },
   });
 
   const bob = await prisma.user.upsert({
     where: { email: "bob@example.com" },
-    update: {},
-    create: { name: "Bob", email: "bob@example.com", passwordHash },
+    update: { emailVerifiedAt: verifiedAt },
+    create: {
+      name: "Bob",
+      email: "bob@example.com",
+      passwordHash,
+      emailVerifiedAt: verifiedAt,
+    },
   });
 
   const charlie = await prisma.user.upsert({
     where: { email: "charlie@example.com" },
-    update: {},
-    create: { name: "Charlie", email: "charlie@example.com", passwordHash },
+    update: { emailVerifiedAt: verifiedAt },
+    create: {
+      name: "Charlie",
+      email: "charlie@example.com",
+      passwordHash,
+      emailVerifiedAt: verifiedAt,
+    },
   });
 
   const existingGroup = await prisma.group.findFirst({

@@ -66,5 +66,16 @@ export async function requireSession(): Promise<SessionPayload> {
   if (!session) {
     throw new Error("UNAUTHORIZED");
   }
+
+  const { prisma } = await import("@/lib/prisma");
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { emailVerifiedAt: true },
+  });
+
+  if (!user?.emailVerifiedAt) {
+    throw new Error("EMAIL_NOT_VERIFIED");
+  }
+
   return session;
 }

@@ -1,15 +1,17 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthFooterLink, AuthLayout } from "@/components/layout/AuthLayout";
-import { api } from "@/lib/api-client";
+import { api, ApiError } from "@/lib/api-client";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -22,14 +24,22 @@ export default function LoginPage() {
 
     try {
       await api.login({ email, password });
-      router.push("/");
+      router.push(next && next.startsWith("/") ? next : "/");
       router.refresh();
     } catch (err) {
+      if (err instanceof ApiError && err.code === "EMAIL_NOT_VERIFIED") {
+        const verifyEmail = err.email ?? email;
+        router.push(`/verify-email?email=${encodeURIComponent(verifyEmail)}`);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
     }
   }
+
+  const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
+  const registerHref = next ? `/register?next=${encodeURIComponent(next)}` : "/register";
 
   return (
     <AuthLayout
@@ -37,7 +47,7 @@ export default function LoginPage() {
       subtitle="Sign in to your FairSplit account"
       footer={
         <>
-          No account? <AuthFooterLink href="/register">Register</AuthFooterLink>
+          No account? <AuthFooterLink href={registerHref}>Register</AuthFooterLink>
         </>
       }
     >
@@ -68,5 +78,13 @@ export default function LoginPage() {
         </Button>
       </form>
     </AuthLayout>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

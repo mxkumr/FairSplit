@@ -14,7 +14,8 @@ export async function POST(request: Request) {
       return jsonError(parsed.error.errors[0]?.message ?? "Invalid input", 400);
     }
 
-    const { email, password } = parsed.data;
+    const email = parsed.data.email.trim().toLowerCase();
+    const { password } = parsed.data;
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
@@ -24,6 +25,13 @@ export async function POST(request: Request) {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       return jsonError("Invalid email or password", 401);
+    }
+
+    if (!user.emailVerifiedAt) {
+      return NextResponse.json(
+        { error: "Email not verified", code: "EMAIL_NOT_VERIFIED", email: user.email },
+        { status: 403 },
+      );
     }
 
     await createSession({ userId: user.id, email: user.email, name: user.name });

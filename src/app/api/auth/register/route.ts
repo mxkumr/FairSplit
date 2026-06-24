@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { createSession } from "@/lib/auth";
+import { sendVerificationOtp } from "@/lib/email";
+import { createAndStoreOtp } from "@/lib/otp";
 import { handleApiError, jsonError } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
@@ -15,21 +16,41 @@ export async function POST(request: Request) {
     }
 
     const { name, email, password } = parsed.data;
+    const normalizedEmail = email.trim().toLowerCase();
 
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    if (existing?.emailVerifiedAt) {
       return jsonError("Email already registered", 409);
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await prisma.user.create({
-      data: { name, email, passwordHash },
-      select: { id: true, name: true, email: true },
-    });
 
-    await createSession({ userId: user.id, email: user.email, name: user.name });
+    const user = existing
+      ? await prisma.user.update({
+          where: { id: existing.id },
+          data: { name, passwordHash },
+          select: { id: true, name: true, email: true },
+        })
+      : await prisma.user.create({
+          data: { name, email: normalizedEmail, passwordHash },
+          select: { id: true, name: true, email: true },
+        });
 
-    return NextResponse.json({ user }, { status: 201 });
+    const code = await createAndStoreOtp(normalizedEmail);
+    const sendResult = await sendVerificationOtp(normalizedEmail, code);
+
+    return NextResponse.json(
+      {
+        needsVerification: true,
+        email: user.email,
+        message: "Verification code sent to your email",
+        ...(sendResult.dev && process.env.NODE_ENV !== "production"
+          ? { devCode: code }
+          : {}),
+      },
+      { status: 201 },
+    );
   } catch (error) {
     return handleApiError(error);
   }

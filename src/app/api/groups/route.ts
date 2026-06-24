@@ -68,12 +68,14 @@ export async function POST(request: Request) {
     }
 
     const group = await prisma.$transaction(async (tx) => {
+      const { generateInviteToken } = await import("@/lib/invite");
       const created = await tx.group.create({
         data: {
           name,
           information,
           currency,
           currencySymbol,
+          inviteToken: generateInviteToken(),
           createdByUserId: session.userId,
           members: {
             create: [

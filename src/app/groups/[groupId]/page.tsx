@@ -1,12 +1,13 @@
 "use client";
 
 import { use } from "react";
-import { ArrowLeft, Share2, Star } from "lucide-react";
+import { ArrowLeft, Star } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
 import { ActivityFeed } from "@/components/groups/ActivityFeed";
 import { AddMemberModal } from "@/components/groups/AddMemberModal";
+import { ShareGroupInviteButton } from "@/components/groups/ShareGroupInviteButton";
 import { GroupActivityLog } from "@/components/groups/GroupActivityLog";
 import { GroupCurrencyProvider, useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import { GroupQuickActions } from "@/components/groups/GroupQuickActions";
@@ -29,11 +30,13 @@ import { cn } from "@/lib/utils";
 
 function GroupHero({
   group,
+  members,
   membersCount,
   onToggleFavorite,
   isFavorite,
 }: {
   group: NonNullable<ReturnType<typeof useGroup>["data"]>["group"];
+  members: { id: string }[];
   membersCount: number;
   onToggleFavorite: () => void;
   isFavorite: boolean;
@@ -56,14 +59,7 @@ function GroupHero({
             </Link>
           </Button>
           <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="icon"
-              className="rounded-full glass"
-              aria-label="Share"
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
+            <ShareGroupInviteButton groupId={group.id} variant="icon" />
             <Button
               variant="secondary"
               size="icon"
@@ -99,7 +95,7 @@ function GroupHero({
           </span>
           <span>-</span>
           <span>{group.expenses.length} expenses</span>
-          <AddMemberModal groupId={group.id} />
+          <AddMemberModal groupId={group.id} members={members} />
         </div>
       </div>
     </div>
@@ -133,6 +129,7 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
             ) : (
               <GroupHero
                 group={group}
+                members={members}
                 membersCount={members.length}
                 onToggleFavorite={() => toggleFavorite.mutate()}
                 isFavorite={group.isFavorite}

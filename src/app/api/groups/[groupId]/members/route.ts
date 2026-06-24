@@ -21,13 +21,22 @@ export async function POST(request: Request, context: RouteContext) {
       return jsonError(parsed.error.errors[0]?.message ?? "Invalid input", 400);
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: parsed.data.email },
-      select: { id: true, name: true, email: true },
-    });
+    const user = parsed.data.userId
+      ? await prisma.user.findUnique({
+          where: { id: parsed.data.userId },
+          select: { id: true, name: true, email: true },
+        })
+      : await prisma.user.findUnique({
+          where: { email: parsed.data.email!.trim().toLowerCase() },
+          select: { id: true, name: true, email: true },
+        });
 
     if (!user) {
       return jsonError("No user found with that email", 404);
+    }
+
+    if (user.id === session.userId) {
+      return jsonError("You are already in this group", 400);
     }
 
     const existing = await prisma.groupMember.findUnique({
