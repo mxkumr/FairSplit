@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCents } from "@/lib/money";
+import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import type { BalanceResponse } from "@/lib/api-client";
 
 function getInitials(name: string) {
@@ -17,6 +18,7 @@ function getInitials(name: string) {
 }
 
 export function RawBalancesTab({ balances }: { balances: BalanceResponse }) {
+  const { currencySymbol } = useGroupCurrency();
   if (balances.debts.length === 0) {
     return (
       <Card>
@@ -48,7 +50,7 @@ export function RawBalancesTab({ balances }: { balances: BalanceResponse }) {
               </AvatarFallback>
             </Avatar>
             <span className="text-sm font-medium flex-1">{debt.toUser.name}</span>
-            <Badge variant="warning">{formatCents(debt.amount)}</Badge>
+            <Badge variant="warning">{formatCents(debt.amount, currencySymbol)}</Badge>
           </CardContent>
         </Card>
       ))}

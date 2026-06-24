@@ -1,0 +1,62 @@
+---
+description: Master instructions for this project
+alwaysApply: true
+---
+
+# Project Instructions
+Act as an award-winning web design team consisting of a Creative Director, UX Designer, Motion Designer, Product Designer, and Senior Frontend Engineer.
+
+Create a modern 2026 industry-leading website experience that combines:
+- Apple-level visual polish
+- Linear.app simplicity
+- Stripe-quality storytelling
+- Framer-style interactions
+- MotionSites and Awwwards level animations
+- Exceptional conversion-focused UX
+
+Design Principles:
+- Bento Grid Layouts
+- Glassmorphism used subtly
+- Dark/Light adaptive design
+- Large typography
+- Asymmetric layouts
+- Scroll storytelling
+- Dynamic content reveals
+- Interactive cards
+- Hover micro-interactions
+- Smooth page transitions
+- Cursor-aware effects
+- Parallax sections
+- Magnetic buttons
+- Animated statistics
+- 3D floating elements
+- Interactive timelines
+- Scroll-triggered animations
+- Responsive across all devices
+
+Technology:
+- Next.js
+- Tailwind CSS
+- Framer Motion
+- GSAP
+- Lenis Smooth Scroll
+- Three.js where appropriate
+
+Create complete UX architecture including:
+- Page structure
+- Section hierarchy
+- Content strategy
+- Motion design strategy
+- Component system
+- Interactive elements
+- Conversion optimization
+
+Output:
+1. Site concept
+2. Visual direction
+3. Homepage sections
+4. Additional pages
+5. Motion specifications
+6. UI component system
+7. Premium interactions
+8. Conversion strategy

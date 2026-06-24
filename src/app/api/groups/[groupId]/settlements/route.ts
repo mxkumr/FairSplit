@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
-import { computeBalancesFromExpenses } from "@/lib/balances";
+import { computeGroupBalances } from "@/lib/balances";
 import { simplifyDebts } from "@/lib/debt-simplification";
 import { handleApiError } from "@/lib/api-helpers";
-import { assertGroupMember, getGroupExpensesForBalances } from "@/lib/groups";
+import { assertGroupMember, getGroupBalanceData } from "@/lib/groups";
 
 type RouteContext = { params: Promise<{ groupId: string }> };
 
@@ -13,8 +13,8 @@ export async function GET(_request: Request, context: RouteContext) {
     const { groupId } = await context.params;
     await assertGroupMember(groupId, session.userId);
 
-    const expenses = await getGroupExpensesForBalances(groupId);
-    const { netBalances } = computeBalancesFromExpenses(expenses);
+    const { expenses, payments } = await getGroupBalanceData(groupId);
+    const { netBalances } = computeGroupBalances(expenses, payments);
     const rawSettlements = simplifyDebts(
       netBalances.map((b) => ({ userId: b.userId, amount: b.amount })),
     );

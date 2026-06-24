@@ -17,29 +17,73 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export type AuthUser = { id: string; name: string; email: string };
 
+export type Category = { id: number; grouping: string; name: string };
+
+export type ExpenseDocument = {
+  id: string;
+  filename: string;
+  mimeType: string;
+  url: string;
+};
+
 export type GroupSummary = {
   id: string;
   name: string;
+  information: string | null;
+  currency: string;
+  currencySymbol: string;
+  isFavorite: boolean;
   createdAt: string;
   memberCount: number;
   _count: { expenses: number };
-};
-
-export type GroupDetail = {
-  id: string;
-  name: string;
-  createdAt: string;
-  members: { user: AuthUser }[];
-  expenses: ExpenseItem[];
 };
 
 export type ExpenseItem = {
   id: string;
   description: string;
   amount: number;
+  expenseDate: string;
   createdAt: string;
+  splitMode: string;
+  notes: string | null;
+  isReimbursement: boolean;
+  recurrenceRule: string;
+  categoryId: number | null;
+  category: Category | null;
   paidBy: AuthUser;
-  splits: { userId: string; amountOwed: number; user: AuthUser }[];
+  splits: { userId: string; amountOwed: number; shares: number; user: AuthUser }[];
+  documents: ExpenseDocument[];
+};
+
+export type PaymentItem = {
+  id: string;
+  amount: number;
+  note: string | null;
+  createdAt: string;
+  fromUser: AuthUser;
+  toUser: AuthUser;
+};
+
+export type GroupDetail = {
+  id: string;
+  name: string;
+  information: string | null;
+  currency: string;
+  currencySymbol: string;
+  isFavorite: boolean;
+  createdAt: string;
+  members: { isFavorite?: boolean; user: AuthUser }[];
+  expenses: ExpenseItem[];
+  payments: PaymentItem[];
+};
+
+export type ActivityItem = {
+  id: string;
+  activityType: string;
+  user: AuthUser | null;
+  expenseId: string | null;
+  data: Record<string, unknown> | null;
+  createdAt: string;
 };
 
 export type BalanceResponse = {
@@ -64,10 +108,30 @@ export type SettlementResponse = {
   transactionCount: number;
 };
 
+export type FriendItem = {
+  id: string;
+  friend: AuthUser;
+  createdAt: string;
+};
+
 export type DashboardBalances = {
   totalOwed: number;
   totalOwing: number;
   groups: { groupId: string; groupName: string; netAmount: number }[];
+  friends: { userId: string; name: string; email: string; netAmount: number }[];
+};
+
+export type ExpensePayload = {
+  description: string;
+  amount: number;
+  paidByUserId: string;
+  expenseDate?: string;
+  categoryId?: number | null;
+  splitMode?: string;
+  notes?: string;
+  isReimbursement?: boolean;
+  recurrenceRule?: string;
+  splits: { userId: string; amountOwed: number; shares?: number }[];
 };
 
 export const api = {
@@ -90,9 +154,37 @@ export const api = {
 
   me: () => fetch("/api/auth/me").then(handleResponse<{ user: AuthUser }>),
 
+  getCategories: () =>
+    fetch("/api/categories").then(handleResponse<{ categories: Category[] }>),
+
+  getFriends: () => fetch("/api/friends").then(handleResponse<{ friends: FriendItem[] }>),
+
+  addFriend: (body: { email: string }) =>
+    fetch("/api/friends", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(handleResponse<{ friend: AuthUser; createdAt: string }>),
+
+  removeFriend: (friendId: string) =>
+    fetch(`/api/friends/${friendId}`, { method: "DELETE" }).then(
+      handleResponse<{ success: boolean }>,
+    ),
+
+  searchUsers: (q: string) =>
+    fetch(`/api/users/search?q=${encodeURIComponent(q)}`).then(
+      handleResponse<{ users: AuthUser[] }>,
+    ),
+
   getGroups: () => fetch("/api/groups").then(handleResponse<{ groups: GroupSummary[] }>),
 
-  createGroup: (body: { name: string; memberIds?: string[] }) =>
+  createGroup: (body: {
+    name: string;
+    information?: string;
+    currency?: string;
+    currencySymbol?: string;
+    memberIds?: string[];
+  }) =>
     fetch("/api/groups", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -102,20 +194,75 @@ export const api = {
   getGroup: (groupId: string) =>
     fetch(`/api/groups/${groupId}`).then(handleResponse<{ group: GroupDetail }>),
 
-  createExpense: (
+  updateGroup: (
     groupId: string,
     body: {
-      description: string;
-      amount: number;
-      paidByUserId: string;
-      splits: { userId: string; amountOwed: number }[];
+      name?: string;
+      information?: string | null;
+      currency?: string;
+      currencySymbol?: string;
     },
   ) =>
+    fetch(`/api/groups/${groupId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(handleResponse<{ group: Partial<GroupDetail> }>),
+
+  toggleFavorite: (groupId: string) =>
+    fetch(`/api/groups/${groupId}/favorite`, { method: "POST" }).then(
+      handleResponse<{ isFavorite: boolean }>,
+    ),
+
+  getActivities: (groupId: string) =>
+    fetch(`/api/groups/${groupId}/activities`).then(
+      handleResponse<{ activities: ActivityItem[] }>,
+    ),
+
+  addGroupMember: (groupId: string, body: { email: string }) =>
+    fetch(`/api/groups/${groupId}/members`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(handleResponse<{ member: AuthUser }>),
+
+  createExpense: (groupId: string, body: ExpensePayload) =>
     fetch(`/api/groups/${groupId}/expenses`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).then(handleResponse<{ expense: ExpenseItem }>),
+
+  updateExpense: (groupId: string, expenseId: string, body: ExpensePayload) =>
+    fetch(`/api/groups/${groupId}/expenses/${expenseId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(handleResponse<{ expense: ExpenseItem }>),
+
+  deleteExpense: (groupId: string, expenseId: string) =>
+    fetch(`/api/groups/${groupId}/expenses/${expenseId}`, { method: "DELETE" }).then(
+      handleResponse<{ success: boolean }>,
+    ),
+
+  uploadExpenseDocument: (groupId: string, expenseId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return fetch(`/api/groups/${groupId}/expenses/${expenseId}/documents`, {
+      method: "POST",
+      body: formData,
+    }).then(handleResponse<{ document: ExpenseDocument }>);
+  },
+
+  recordPayment: (
+    groupId: string,
+    body: { fromUserId: string; toUserId: string; amount: number; note?: string },
+  ) =>
+    fetch(`/api/groups/${groupId}/payments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(handleResponse<{ payment: PaymentItem }>),
 
   getBalances: () => fetch("/api/balances").then(handleResponse<DashboardBalances>),
 

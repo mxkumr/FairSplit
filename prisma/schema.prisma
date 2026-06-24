@@ -7,6 +7,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SplitMode {
+  EVENLY
+  BY_SHARES
+  BY_PERCENTAGE
+  BY_AMOUNT
+}
+
+enum RecurrenceRule {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ActivityType {
+  CREATE_GROUP
+  UPDATE_GROUP
+  CREATE_EXPENSE
+  UPDATE_EXPENSE
+  DELETE_EXPENSE
+  CREATE_PAYMENT
+  ADD_MEMBER
+  REMOVE_MEMBER
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -19,27 +44,60 @@ model User {
   groupMembers   GroupMember[]
   expensesPaid   Expense[]      @relation("ExpensePayer")
   expenseSplits  ExpenseSplit[]
+  friendships    Friendship[]   @relation("UserFriends")
+  friendOf       Friendship[]   @relation("FriendOf")
+  paymentsFrom   Payment[]      @relation("PaymentFrom")
+  paymentsTo     Payment[]      @relation("PaymentTo")
+  activities     Activity[]
 
   @@map("users")
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  friendId  String   @map("friend_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  grouping String
+  name     String
+  expenses Expense[]
+
+  @@map("categories")
 }
 
 model Group {
   id              String   @id @default(cuid())
   name            String
+  information     String?
+  currency        String   @default("USD")
+  currencySymbol  String   @default("$") @map("currency_symbol")
   createdByUserId String   @map("created_by")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  createdBy User          @relation("GroupCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  members   GroupMember[]
-  expenses  Expense[]
+  createdBy  User          @relation("GroupCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  members    GroupMember[]
+  expenses   Expense[]
+  payments   Payment[]
+  activities Activity[]
 
   @@map("groups")
 }
 
 model GroupMember {
-  groupId String @map("group_id")
-  userId  String @map("user_id")
+  groupId    String  @map("group_id")
+  userId     String  @map("user_id")
+  isFavorite Boolean @default(false) @map("is_favorite")
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -49,16 +107,25 @@ model GroupMember {
 }
 
 model Expense {
-  id              String   @id @default(cuid())
-  groupId         String   @map("group_id")
+  id              String         @id @default(cuid())
+  groupId         String         @map("group_id")
   description     String
   amount          Int
-  paidByUserId    String   @map("paid_by_user_id")
-  createdAt       DateTime @default(now()) @map("created_at")
+  paidByUserId    String         @map("paid_by_user_id")
+  categoryId      Int?           @map("category_id")
+  splitMode       SplitMode      @default(EVENLY) @map("split_mode")
+  notes           String?
+  isReimbursement Boolean        @default(false) @map("is_reimbursement")
+  recurrenceRule  RecurrenceRule @default(NONE) @map("recurrence_rule")
+  expenseDate     DateTime       @default(now()) @map("expense_date")
+  createdAt       DateTime       @default(now()) @map("created_at")
 
-  group    Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  paidBy   User           @relation("ExpensePayer", fields: [paidByUserId], references: [id], onDelete: Restrict)
-  splits   ExpenseSplit[]
+  group                Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy               User                  @relation("ExpensePayer", fields: [paidByUserId], references: [id], onDelete: Restrict)
+  category             Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  splits               ExpenseSplit[]
+  documents            ExpenseDocument[]
+  recurringExpenseLink RecurringExpenseLink?
 
   @@map("expenses")
 }
@@ -67,10 +134,68 @@ model ExpenseSplit {
   expenseId  String @map("expense_id")
   userId     String @map("user_id")
   amountOwed Int    @map("amount_owed")
+  shares     Int    @default(1)
 
   expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([expenseId, userId])
   @@map("expense_splits")
+}
+
+model ExpenseDocument {
+  id        String  @id @default(cuid())
+  expenseId String  @map("expense_id")
+  filename  String
+  mimeType  String  @map("mime_type")
+  url       String
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@map("expense_documents")
+}
+
+model RecurringExpenseLink {
+  id                    String    @id @default(cuid())
+  groupId               String    @map("group_id")
+  currentFrameExpenseId String    @unique @map("current_frame_expense_id")
+  nextExpenseCreatedAt  DateTime? @map("next_expense_created_at")
+  nextExpenseDate       DateTime  @map("next_expense_date")
+
+  expense Expense @relation(fields: [currentFrameExpenseId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@map("recurring_expense_links")
+}
+
+model Payment {
+  id         String   @id @default(cuid())
+  groupId    String   @map("group_id")
+  fromUserId String   @map("from_user_id")
+  toUserId   String   @map("to_user_id")
+  amount     Int
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromUser User  @relation("PaymentFrom", fields: [fromUserId], references: [id], onDelete: Restrict)
+  toUser   User  @relation("PaymentTo", fields: [toUserId], references: [id], onDelete: Restrict)
+
+  @@map("payments")
+}
+
+model Activity {
+  id           String       @id @default(cuid())
+  groupId      String       @map("group_id")
+  activityType ActivityType @map("activity_type")
+  userId       String?      @map("user_id")
+  expenseId    String?      @map("expense_id")
+  data         String?
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([groupId, createdAt(sort: Desc)])
+  @@map("activities")
 }

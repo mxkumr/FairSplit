@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
-import { computeBalancesFromExpenses, computeDashboardBalance } from "@/lib/balances";
+import { computeGroupBalances, computeDashboardBalance } from "@/lib/balances";
 import { handleApiError } from "@/lib/api-helpers";
-import { getGroupExpensesForBalances } from "@/lib/groups";
+import { getGroupBalanceData } from "@/lib/groups";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -16,12 +16,13 @@ export async function GET() {
 
     const groupBalances = await Promise.all(
       memberships.map(async (m) => {
-        const expenses = await getGroupExpensesForBalances(m.group.id);
-        const { netBalances } = computeBalancesFromExpenses(expenses);
+        const { expenses, payments } = await getGroupBalanceData(m.group.id);
+        const result = computeGroupBalances(expenses, payments);
         return {
           groupId: m.group.id,
           groupName: m.group.name,
-          netBalances,
+          netBalances: result.netBalances,
+          debts: result.debts,
         };
       }),
     );

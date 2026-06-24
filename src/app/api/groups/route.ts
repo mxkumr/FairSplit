@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 import { handleApiError, jsonError } from "@/lib/api-helpers";
+import { getCurrencySymbol } from "@/lib/currencies";
 import { prisma } from "@/lib/prisma";
 import { createGroupSchema } from "@/lib/validations/group";
 
@@ -17,12 +19,19 @@ export async function GET() {
           },
         },
       },
-      orderBy: { group: { updatedAt: "desc" } },
+      orderBy: [
+        { isFavorite: "desc" },
+        { group: { updatedAt: "desc" } },
+      ],
     });
 
     const groups = memberships.map((m) => ({
       id: m.group.id,
       name: m.group.name,
+      information: m.group.information,
+      currency: m.group.currency,
+      currencySymbol: m.group.currencySymbol,
+      isFavorite: m.isFavorite,
       createdAt: m.group.createdAt.toISOString(),
       memberCount: m.group._count.members,
       _count: { expenses: m.group._count.expenses },
@@ -44,7 +53,8 @@ export async function POST(request: Request) {
       return jsonError(parsed.error.errors[0]?.message ?? "Invalid input", 400);
     }
 
-    const { name, memberIds } = parsed.data;
+    const { name, information, currency, memberIds } = parsed.data;
+    const currencySymbol = getCurrencySymbol(currency);
     const uniqueMemberIds = [...new Set(memberIds.filter((id) => id !== session.userId))];
 
     if (uniqueMemberIds.length > 0) {
@@ -61,6 +71,9 @@ export async function POST(request: Request) {
       const created = await tx.group.create({
         data: {
           name,
+          information,
+          currency,
+          currencySymbol,
           createdByUserId: session.userId,
           members: {
             create: [
@@ -69,10 +82,6 @@ export async function POST(request: Request) {
             ],
           },
         },
-      });
-
-      return tx.group.findUniqueOrThrow({
-        where: { id: created.id },
         include: {
           members: {
             include: { user: { select: { id: true, name: true, email: true } } },
@@ -80,29 +89,33 @@ export async function POST(request: Request) {
           expenses: {
             include: {
               paidBy: { select: { id: true, name: true, email: true } },
+              category: { select: { id: true, grouping: true, name: true } },
               splits: {
                 include: { user: { select: { id: true, name: true, email: true } } },
               },
+              documents: true,
             },
-            orderBy: { createdAt: "desc" },
+          },
+          payments: {
+            include: {
+              fromUser: { select: { id: true, name: true, email: true } },
+              toUser: { select: { id: true, name: true, email: true } },
+            },
           },
         },
       });
+      return created;
     });
 
-    return NextResponse.json(
-      {
-        group: {
-          ...group,
-          createdAt: group.createdAt.toISOString(),
-          expenses: group.expenses.map((e) => ({
-            ...e,
-            createdAt: e.createdAt.toISOString(),
-          })),
-        },
-      },
-      { status: 201 },
-    );
+    await logActivity({
+      groupId: group.id,
+      activityType: "CREATE_GROUP",
+      userId: session.userId,
+      data: { name: group.name },
+    });
+
+    const { serializeGroup } = await import("@/lib/serializers");
+    return NextResponse.json({ group: serializeGroup(group) }, { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }
