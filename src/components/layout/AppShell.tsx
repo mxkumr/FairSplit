@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle, ThemeToggleIcon } from "@/components/ui/theme-toggle";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useLogout, useMe } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
 
@@ -56,12 +56,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border/60 bg-sidebar px-4 py-6 md:flex">
-        <Link href="/" className="mb-8 flex items-center gap-2.5 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-brand text-brand-foreground shadow-soft">
-            <Wallet className="h-5 w-5" />
-          </div>
-          <span className="text-lg font-bold tracking-tight">FairSplit</span>
-        </Link>
+        <div className="mb-8 flex items-center justify-between gap-2 px-2">
+          <Link href="/" className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl gradient-brand text-brand-foreground shadow-soft">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <span className="text-lg font-bold tracking-tight truncate">FairSplit</span>
+          </Link>
+          <ThemeToggle />
+        </div>
 
         <nav className="flex flex-1 flex-col gap-1">
           {desktopNav.map(({ href, label, icon: Icon }) => (
@@ -93,10 +96,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </nav>
 
-        <div className="mb-4 hidden md:block">
-          <ThemeToggle className="w-full justify-center" />
-        </div>
-
         {data?.user && (
           <div className="mt-auto flex items-center gap-3 rounded-2xl bg-muted/60 p-3">
             <Avatar className="h-10 w-10">
@@ -126,7 +125,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             FairSplit
           </Link>
           <div className="flex items-center gap-1">
-            <ThemeToggleIcon />
+            <ThemeToggle />
             {data?.user && (
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">

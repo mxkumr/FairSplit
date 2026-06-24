@@ -20,7 +20,7 @@ export function GroupQuickActions({
   const net = balances?.netBalances.find((b) => b.userId === currentUserId)?.amount ?? 0;
 
   return (
-    <div className="rounded-3xl bg-card p-6 shadow-soft border border-border/50">
+    <div className="rounded-3xl bg-card p-6 shadow-soft border border-border">
       <h2 className="text-lg font-bold">Quick actions</h2>
       <p className="mt-1 text-sm text-muted-foreground">Add expenses and manage this group.</p>
       <div className="mt-5">

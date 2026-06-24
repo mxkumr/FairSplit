@@ -118,7 +118,7 @@ export default function DashboardPage() {
             )}
 
             {filteredGroups.length === 0 && (
-              <div className="rounded-3xl bg-card py-12 text-center shadow-soft border border-border/50 text-muted-foreground">
+              <div className="rounded-3xl bg-card py-12 text-center shadow-soft border border-border text-muted-foreground">
                 <p className="text-muted-foreground">
                   {search ? "No groups match your search." : "No groups yet."}
                 </p>

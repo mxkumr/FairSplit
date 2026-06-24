@@ -54,10 +54,10 @@ export function AuthLayout({
       {/* Form card */}
       <div className="flex flex-col justify-center bg-background px-6 py-8 lg:px-16 lg:py-12">
         <div className="mx-auto w-full max-w-md">
-          <div className="mb-4 flex justify-end lg:justify-start">
+          <div className="mb-4 flex justify-end">
             <ThemeToggle />
           </div>
-          <div className="rounded-3xl bg-card p-6 shadow-soft lg:p-8 border border-border/50">
+          <div className="surface p-6 lg:p-8">
             <h2 className="text-2xl font-bold">{title}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
             <div className="mt-6">{children}</div>

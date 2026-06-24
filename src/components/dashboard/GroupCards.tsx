@@ -22,7 +22,7 @@ export function FeaturedGroupCard({
 
   return (
     <Link href={`/groups/${group.id}`} className="block group">
-      <div className="overflow-hidden rounded-3xl bg-card shadow-soft border border-border/50 transition-transform hover:scale-[1.01]">
+      <div className="overflow-hidden rounded-3xl bg-card shadow-soft border border-border transition-transform hover:scale-[1.01]">
         <div className={cn("relative h-52 bg-gradient-to-br sm:h-64", cover)}>
           <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full glass px-3 py-1.5 text-xs font-semibold">
             <Users className="h-3.5 w-3.5" />
@@ -76,7 +76,7 @@ export function OngoingSplitCard({
 
   return (
     <Link href={`/groups/${group.id}`} className="block">
-      <div className="flex gap-4 rounded-3xl bg-card p-4 shadow-soft border border-border/50 transition-colors hover:bg-muted/50">
+      <div className="flex gap-4 rounded-3xl bg-card p-4 shadow-soft border border-border transition-colors hover:bg-muted/50">
         <div className={cn("h-20 w-20 shrink-0 rounded-2xl bg-gradient-to-br", cover)} />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">

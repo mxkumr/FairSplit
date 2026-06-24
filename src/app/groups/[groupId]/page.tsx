@@ -42,7 +42,7 @@ function GroupHero({
   const cover = getGroupCoverClass(group.id);
 
   return (
-    <div className="overflow-hidden rounded-3xl bg-card shadow-soft border border-border/50">
+    <div className="overflow-hidden rounded-3xl bg-card shadow-soft border border-border">
       <div className={cn("relative h-44 bg-gradient-to-br sm:h-56", cover)}>
         <div className="absolute inset-0 flex items-start justify-between p-4">
           <Button

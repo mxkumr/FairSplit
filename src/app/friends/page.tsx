@@ -44,7 +44,7 @@ export default function FriendsPage() {
           <h1 className="text-2xl font-bold sm:text-3xl">Friends</h1>
         </div>
 
-        <div className="rounded-3xl bg-card p-5 shadow-soft border border-border/50 sm:p-6">
+        <div className="rounded-3xl bg-card p-5 shadow-soft border border-border sm:p-6">
           <h2 className="font-bold">Add a friend</h2>
           <p className="mt-1 text-sm text-muted-foreground">Enter their FairSplit email address</p>
           <form onSubmit={handleAdd} className="mt-4 flex gap-3">
@@ -77,14 +77,14 @@ export default function FriendsPage() {
         ) : (
           <div className="space-y-3">
             {data?.friends.length === 0 ? (
-              <div className="rounded-3xl bg-card py-12 text-center shadow-soft border border-border/50 text-muted-foreground">
+              <div className="rounded-3xl bg-card py-12 text-center shadow-soft border border-border text-muted-foreground">
                 No friends yet. Add someone by email above.
               </div>
             ) : (
               data?.friends.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-3 rounded-3xl bg-card p-4 shadow-soft border border-border/50"
+                  className="flex items-center gap-3 rounded-3xl bg-card p-4 shadow-soft border border-border"
                 >
                   <Avatar className="h-11 w-11">
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">

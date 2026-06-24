@@ -57,7 +57,7 @@ export default function NewGroupPage() {
           <h1 className="text-2xl font-bold sm:text-3xl">Create Group</h1>
         </div>
 
-        <div className="rounded-3xl bg-card p-5 shadow-soft border border-border/50 sm:p-6">
+        <div className="rounded-3xl bg-card p-5 shadow-soft border border-border sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="name">Group name</Label>

@@ -26,7 +26,7 @@ export function FriendBalances({ balances }: { balances: DashboardBalances }) {
         {balances.friends.map((friend) => (
           <div
             key={friend.userId}
-            className="flex items-center gap-3 rounded-3xl bg-card p-4 shadow-soft border border-border/50"
+            className="flex items-center gap-3 rounded-3xl bg-card p-4 shadow-soft border border-border"
           >
             <Avatar className="h-11 w-11">
               <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
