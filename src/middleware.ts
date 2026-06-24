@@ -4,6 +4,9 @@ import { getJwtSecret, getSessionCookieName } from "@/lib/auth-config";
 
 const publicPaths = ["/login", "/register", "/verify-email", "/join", "/add-friend", "/privacy", "/terms"];
 
+/** Logged-in users are sent home from these; other public routes stay accessible */
+const guestOnlyPaths = ["/login", "/register"];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -32,11 +35,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (isAuthenticated && isPublic) {
-    const allowedWhenAuthed = ["/verify-email", "/join", "/add-friend"];
-    if (!allowedWhenAuthed.some((path) => pathname.startsWith(path))) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
+  if (isAuthenticated && guestOnlyPaths.some((path) => pathname.startsWith(path))) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();
