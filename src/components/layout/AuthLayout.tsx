@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FairSplitLogo, FairSplitLogoMark } from "@/components/brand/FairSplitLogo";
+import { LegalFooterLinks } from "@/components/legal/LegalFooterLinks";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function AuthLayout({
@@ -56,6 +57,7 @@ export function AuthLayout({
             <div className="mt-6">{children}</div>
           </div>
           <p className="mt-6 text-center text-sm text-muted-foreground">{footer}</p>
+          <LegalFooterLinks className="mt-4 text-center" />
         </div>
       </div>
     </div>

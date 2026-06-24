@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Github, Linkedin, Mail } from "lucide-react";
 import { CREATOR } from "@/lib/site-config";
+import { LegalFooterLinks } from "@/components/legal/LegalFooterLinks";
 
 export function AppCreatorFooter() {
   return (
@@ -49,6 +50,7 @@ export function AppCreatorFooter() {
           </a>
         </div>
       </div>
+      <LegalFooterLinks className="mt-4" />
     </footer>
   );
 }

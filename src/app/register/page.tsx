@@ -79,6 +79,11 @@ function RegisterForm() {
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          By creating an account, you agree to our{" "}
+          <AuthFooterLink href="/terms">Terms of Service</AuthFooterLink> and{" "}
+          <AuthFooterLink href="/privacy">Privacy Policy</AuthFooterLink>.
+        </p>
         <Button type="submit" variant="brand" className="w-full" size="lg" disabled={loading}>
           {loading ? "Creating account..." : "Get started"}
         </Button>

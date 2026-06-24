@@ -70,8 +70,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className={cn(
                 "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-colors",
                 isActive(href)
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  ? "gradient-brand text-primary-foreground shadow-soft"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
               )}
             >
               <Icon className="h-5 w-5" />
@@ -83,8 +83,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className={cn(
               "mt-2 flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-colors",
               pathname === "/groups/new"
-                ? "gradient-brand text-brand-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                ? "gradient-brand text-primary-foreground shadow-soft"
+                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
             )}
           >
             <Plus className="h-5 w-5" />

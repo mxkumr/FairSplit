@@ -10,14 +10,15 @@
   --color-card-foreground: oklch(0.13 0 0);
   --color-popover: oklch(1 0 0);
   --color-popover-foreground: oklch(0.13 0 0);
-  --color-primary: oklch(0.13 0 0);
+  /* Logo coral — matches icon.svg gradient end (#FF4B5C) */
+  --color-primary: oklch(0.63 0.22 15);
   --color-primary-foreground: oklch(0.99 0 0);
-  --color-secondary: oklch(0.96 0.004 260);
-  --color-secondary-foreground: oklch(0.2 0 0);
+  --color-secondary: oklch(0.96 0.04 15);
+  --color-secondary-foreground: oklch(0.35 0.14 15);
   --color-muted: oklch(0.96 0.004 260);
   --color-muted-foreground: oklch(0.5 0.01 260);
-  --color-accent: oklch(0.96 0.004 260);
-  --color-accent-foreground: oklch(0.2 0 0);
+  --color-accent: oklch(0.95 0.05 15);
+  --color-accent-foreground: oklch(0.45 0.18 15);
   --color-brand: oklch(0.63 0.22 15);
   --color-brand-foreground: oklch(0.99 0 0);
   --color-success: oklch(0.52 0.14 155);
@@ -29,7 +30,7 @@
   --color-destructive: oklch(0.577 0.245 27.325);
   --color-border: oklch(0.92 0.006 260);
   --color-input: oklch(0.92 0.006 260);
-  --color-ring: oklch(0.13 0 0);
+  --color-ring: oklch(0.63 0.22 15);
   --color-sidebar: oklch(1 0 0);
   --color-nav: oklch(0.13 0 0);
   --color-nav-foreground: oklch(0.99 0 0);
@@ -52,14 +53,14 @@
     --color-card-foreground: oklch(0.98 0 0);
     --color-popover: oklch(0.24 0.008 260);
     --color-popover-foreground: oklch(0.98 0 0);
-    --color-primary: oklch(0.98 0 0);
-    --color-primary-foreground: oklch(0 0 0);
-    --color-secondary: oklch(0.28 0.008 260);
-    --color-secondary-foreground: oklch(0.92 0 0);
+    --color-primary: oklch(0.68 0.22 15);
+    --color-primary-foreground: oklch(0.99 0 0);
+    --color-secondary: oklch(0.28 0.06 15);
+    --color-secondary-foreground: oklch(0.88 0.08 15);
     --color-muted: oklch(0.28 0.008 260);
     --color-muted-foreground: oklch(0.68 0.01 260);
-    --color-accent: oklch(0.3 0.01 260);
-    --color-accent-foreground: oklch(0.98 0 0);
+    --color-accent: oklch(0.28 0.06 15);
+    --color-accent-foreground: oklch(0.78 0.16 15);
     --color-brand: oklch(0.68 0.22 15);
     --color-brand-foreground: oklch(0.99 0 0);
     --color-success: oklch(0.72 0.16 155);
@@ -110,22 +111,22 @@ body {
   }
 
   .gradient-brand {
-    background: linear-gradient(135deg, oklch(0.68 0.24 25), oklch(0.62 0.22 15));
+    background: linear-gradient(135deg, #ff6b6b, #ff4b5c);
   }
 
   .dark .gradient-brand {
-    background: linear-gradient(135deg, oklch(0.72 0.24 25), oklch(0.65 0.22 15));
+    background: linear-gradient(135deg, #ff7a7a, #ff5566);
   }
 
   .gradient-auth {
-    background: linear-gradient(135deg, oklch(0.85 0.08 15), oklch(0.9 0.06 55), oklch(0.92 0.05 85));
+    background: linear-gradient(135deg, #ffe8ea, #fff5f0, #fff9f5);
   }
 
   .dark .gradient-auth {
     background: linear-gradient(
       135deg,
-      oklch(0.08 0.02 300),
-      oklch(0.04 0.01 15),
+      oklch(0.12 0.04 15),
+      oklch(0.06 0.02 15),
       oklch(0 0 0)
     );
   }

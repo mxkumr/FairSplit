@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { getJwtSecret, getSessionCookieName } from "@/lib/auth-config";
 
-const publicPaths = ["/login", "/register", "/verify-email", "/join", "/add-friend"];
+const publicPaths = ["/login", "/register", "/verify-email", "/join", "/add-friend", "/privacy", "/terms"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
