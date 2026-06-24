@@ -9,6 +9,8 @@ import {
   UserRound,
 } from "lucide-react";
 import { FairSplitLogo } from "@/components/brand/FairSplitLogo";
+import { AppCreatorFooter } from "@/components/layout/AppCreatorFooter";
+import { MobileCenterFab } from "@/components/layout/MobileCenterFab";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -134,7 +136,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto max-w-6xl px-4 py-6 pb-28 md:px-8 md:pb-8">{children}</main>
+        <main className="mx-auto max-w-6xl px-4 py-6 pb-28 md:px-8 md:pb-8">
+          {children}
+          <AppCreatorFooter />
+        </main>
       </div>
 
       {/* Mobile floating nav */}
@@ -166,13 +171,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
 
-          <Link
-            href="/groups/new"
-            className="absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full gradient-brand text-brand-foreground shadow-float ring-4 ring-background"
-            aria-label="Create new group"
-          >
-            <Plus className="h-6 w-6" />
-          </Link>
+          <MobileCenterFab />
         </div>
       </nav>
     </div>

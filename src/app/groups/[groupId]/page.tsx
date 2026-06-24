@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Star } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
-import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
 import { ActivityFeed } from "@/components/groups/ActivityFeed";
 import { AddMemberModal } from "@/components/groups/AddMemberModal";
 import { ShareGroupInviteButton } from "@/components/groups/ShareGroupInviteButton";
@@ -258,17 +257,6 @@ function GroupPageContent({ params }: { params: Promise<{ groupId: string }> }) 
             )}
           </aside>
         </div>
-
-        {me?.user && group && (
-          <div className="fixed bottom-24 right-4 z-30 lg:hidden">
-            <AddExpenseModal
-              groupId={groupId}
-              members={members}
-              currentUserId={me.user.id}
-              variant="fab"
-            />
-          </div>
-        )}
       </GroupCurrencyProvider>
     </AppShell>
   );

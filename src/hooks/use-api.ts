@@ -1,14 +1,47 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api-client";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { api, type GroupDetail } from "@/lib/api-client";
 
-function invalidateGroup(queryClient: ReturnType<typeof useQueryClient>, groupId: string) {
-  queryClient.invalidateQueries({ queryKey: ["groups", groupId] });
-  queryClient.invalidateQueries({ queryKey: ["groups", groupId, "balances"] });
-  queryClient.invalidateQueries({ queryKey: ["groups", groupId, "settlements"] });
-  queryClient.invalidateQueries({ queryKey: ["balances"] });
-  queryClient.invalidateQueries({ queryKey: ["groups"] });
+type GroupQueryData = { group: GroupDetail };
+
+function sortExpenses(expenses: GroupDetail["expenses"]) {
+  return [...expenses].sort(
+    (a, b) =>
+      new Date(b.expenseDate ?? b.createdAt).getTime() -
+      new Date(a.expenseDate ?? a.createdAt).getTime(),
+  );
+}
+
+function updateGroupCache(
+  queryClient: QueryClient,
+  groupId: string,
+  updater: (group: GroupDetail) => GroupDetail,
+) {
+  queryClient.setQueryData<GroupQueryData>(["groups", groupId], (old) => {
+    if (!old?.group) return old;
+    return { group: updater(old.group) };
+  });
+}
+
+async function invalidateGroup(queryClient: QueryClient, groupId: string) {
+  await Promise.all([
+    queryClient.refetchQueries({ queryKey: ["groups", groupId] }),
+    queryClient.refetchQueries({ queryKey: ["groups", groupId, "balances"] }),
+    queryClient.refetchQueries({ queryKey: ["groups", groupId, "settlements"] }),
+    queryClient.refetchQueries({ queryKey: ["groups", groupId, "activities"] }),
+    queryClient.refetchQueries({ queryKey: ["balances"] }),
+    queryClient.refetchQueries({ queryKey: ["groups"] }),
+  ]);
+}
+
+export async function refetchGroupData(queryClient: QueryClient, groupId: string) {
+  await invalidateGroup(queryClient, groupId);
 }
 
 export function useCategories() {
@@ -160,7 +193,9 @@ export function useAddGroupMember(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: { email?: string; userId?: string }) => api.addGroupMember(groupId, body),
-    onSuccess: () => invalidateGroup(queryClient, groupId),
+    onSuccess: async () => {
+      await invalidateGroup(queryClient, groupId);
+    },
   });
 }
 
@@ -184,7 +219,13 @@ export function useCreateExpense(groupId: string) {
   return useMutation({
     mutationFn: (body: Parameters<typeof api.createExpense>[1]) =>
       api.createExpense(groupId, body),
-    onSuccess: () => invalidateGroup(queryClient, groupId),
+    onSuccess: async (data) => {
+      updateGroupCache(queryClient, groupId, (group) => ({
+        ...group,
+        expenses: sortExpenses([data.expense, ...group.expenses]),
+      }));
+      await invalidateGroup(queryClient, groupId);
+    },
   });
 }
 
@@ -196,7 +237,17 @@ export function useUpdateExpense(groupId: string) {
       ...body
     }: Parameters<typeof api.updateExpense>[2] & { expenseId: string }) =>
       api.updateExpense(groupId, expenseId, body),
-    onSuccess: () => invalidateGroup(queryClient, groupId),
+    onSuccess: async (data) => {
+      updateGroupCache(queryClient, groupId, (group) => ({
+        ...group,
+        expenses: sortExpenses(
+          group.expenses.map((expense) =>
+            expense.id === data.expense.id ? data.expense : expense,
+          ),
+        ),
+      }));
+      await invalidateGroup(queryClient, groupId);
+    },
   });
 }
 
@@ -204,7 +255,13 @@ export function useDeleteExpense(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (expenseId: string) => api.deleteExpense(groupId, expenseId),
-    onSuccess: () => invalidateGroup(queryClient, groupId),
+    onSuccess: async (_data, expenseId) => {
+      updateGroupCache(queryClient, groupId, (group) => ({
+        ...group,
+        expenses: group.expenses.filter((expense) => expense.id !== expenseId),
+      }));
+      await invalidateGroup(queryClient, groupId);
+    },
   });
 }
 
@@ -213,7 +270,13 @@ export function useRecordPayment(groupId: string) {
   return useMutation({
     mutationFn: (body: Parameters<typeof api.recordPayment>[1]) =>
       api.recordPayment(groupId, body),
-    onSuccess: () => invalidateGroup(queryClient, groupId),
+    onSuccess: async (data) => {
+      updateGroupCache(queryClient, groupId, (group) => ({
+        ...group,
+        payments: [data.payment, ...group.payments],
+      }));
+      await invalidateGroup(queryClient, groupId);
+    },
   });
 }
 

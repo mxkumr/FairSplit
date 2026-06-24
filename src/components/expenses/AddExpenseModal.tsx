@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
-import { useCreateExpense } from "@/hooks/use-api";
+import { useQueryClient } from "@tanstack/react-query";
+import { refetchGroupData, useCreateExpense } from "@/hooks/use-api";
 import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type { AuthUser } from "@/lib/api-client";
@@ -23,27 +24,36 @@ export function AddExpenseModal({
   members,
   currentUserId,
   variant = "default",
+  fabClassName,
 }: {
   groupId: string;
   members: AuthUser[];
   currentUserId: string;
   variant?: "default" | "fab" | "brand";
+  fabClassName?: string;
 }) {
   const { currencySymbol } = useGroupCurrency();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const createExpense = useCreateExpense(groupId);
 
   const trigger =
     variant === "fab" ? (
-      <Button
-        size="icon"
-        variant="brand"
-        className="h-14 w-14 rounded-full shadow-float"
-        aria-label="Add expense"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
+      fabClassName ? (
+        <button type="button" className={fabClassName} aria-label="Add expense">
+          <Plus className="h-6 w-6" />
+        </button>
+      ) : (
+        <Button
+          size="icon"
+          variant="brand"
+          className="h-14 w-14 rounded-full shadow-float gradient-brand text-brand-foreground"
+          aria-label="Add expense"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      )
     ) : (
       <Button
         variant={variant === "brand" ? "brand" : "default"}
@@ -78,6 +88,7 @@ export function AddExpenseModal({
             const result = await createExpense.mutateAsync(values);
             if (file) {
               await api.uploadExpenseDocument(groupId, result.expense.id, file);
+              await refetchGroupData(queryClient, groupId);
             }
             setFile(null);
             setOpen(false);
