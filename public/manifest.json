@@ -1,7 +1,7 @@
 {
   "name": "FairSplit",
   "short_name": "FairSplit",
-  "description": "Free and open source Splitwise alternative",
+  "description": "Free, open-source expense sharing. Split bills with friends, simplify debts, and settle up.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

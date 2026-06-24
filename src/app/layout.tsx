@@ -11,8 +11,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "FairSplit",
-  description: "Free and open source Splitwise alternative - share expenses with friends",
+  title: {
+    default: "FairSplit",
+    template: "%s · FairSplit",
+  },
+  description:
+    "Free, open-source expense sharing for friends and groups. Split bills, simplify debts, settle up, and invite via link — a modern Splitwise alternative.",
   manifest: "/manifest.json",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
