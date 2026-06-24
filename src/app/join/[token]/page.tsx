@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Users } from "lucide-react";
+import { FairSplitLogoMark } from "@/components/brand/FairSplitLogo";
 import { AuthFooterLink, AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
@@ -63,9 +63,7 @@ function JoinGroupContent({ token }: { token: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl gradient-brand text-brand-foreground">
-        <Users className="h-7 w-7" />
-      </div>
+      <FairSplitLogoMark size="xl" className="mx-auto shadow-float" />
       <div className="text-center space-y-2">
         <p className="text-sm text-muted-foreground">You are invited to join</p>
         <h2 className="text-2xl font-bold">{group?.name}</h2>

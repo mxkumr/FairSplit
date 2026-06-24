@@ -111,6 +111,17 @@ export type BalanceResponse = {
   netBalances: { userId: string; amount: number; user: AuthUser }[];
 };
 
+export type SettlementExplanationLine = {
+  kind: "borrowed" | "lent" | "payment_out" | "payment_in";
+  expenseId?: string;
+  paymentId?: string;
+  counterparty: AuthUser;
+  amount: number;
+  netEffect: number;
+  text: string;
+  sortDate: string;
+};
+
 export type SettlementResponse = {
   settlements: {
     fromUserId: string;
@@ -118,8 +129,14 @@ export type SettlementResponse = {
     amount: number;
     fromUser: AuthUser;
     toUser: AuthUser;
+    explanation: {
+      lines: SettlementExplanationLine[];
+      summary: string;
+    };
   }[];
   transactionCount: number;
+  rawDebtCount: number;
+  paymentsSaved: number;
 };
 
 export type FriendItem = {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wallet } from "lucide-react";
+import { FairSplitLogo, FairSplitLogoMark } from "@/components/brand/FairSplitLogo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function AuthLayout({
@@ -26,9 +26,7 @@ export function AuthLayout({
           }}
         />
         <div className="relative flex h-full flex-col justify-end p-12">
-          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-float">
-            <Wallet className="h-6 w-6" />
-          </div>
+          <FairSplitLogoMark size="lg" className="mb-6 shadow-float" />
           <h1 className="max-w-md text-4xl font-bold leading-tight text-balance-tight text-foreground">
             Share expenses instantly with friends
           </h1>
@@ -42,12 +40,7 @@ export function AuthLayout({
       <div className="relative h-48 overflow-hidden lg:hidden">
         <div className="absolute inset-0 gradient-auth" />
         <div className="relative flex h-full items-end p-6">
-          <div>
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">
-              <Wallet className="h-5 w-5" />
-            </div>
-            <p className="text-sm font-semibold text-foreground/80">FairSplit</p>
-          </div>
+          <FairSplitLogo size="md" showWordmark wordmarkClassName="text-sm font-semibold text-foreground/80" />
         </div>
       </div>
 

@@ -1,20 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import { formatCents } from "@/lib/money";
-import type { AuthUser, BalanceResponse } from "@/lib/api-client";
+import type { AuthUser, BalanceResponse, SettlementResponse } from "@/lib/api-client";
 
 export function GroupQuickActions({
   groupId,
   members,
   currentUserId,
   balances,
+  settlements,
 }: {
   groupId: string;
   members: AuthUser[];
   currentUserId: string;
   balances?: BalanceResponse;
+  settlements?: SettlementResponse;
 }) {
   const { currencySymbol } = useGroupCurrency();
   const net = balances?.netBalances.find((b) => b.userId === currentUserId)?.amount ?? 0;
@@ -44,6 +47,25 @@ export function GroupQuickActions({
               </span>
             )}
           </p>
+        </div>
+      )}
+      {settlements && settlements.transactionCount > 0 && (
+        <div className="mt-4 rounded-2xl bg-brand/10 p-3 text-sm">
+          <p className="font-semibold text-brand">
+            {settlements.transactionCount} simplified payment
+            {settlements.transactionCount === 1 ? "" : "s"} to settle up
+          </p>
+          {settlements.paymentsSaved > 0 && (
+            <p className="mt-1 text-muted-foreground">
+              Saves {settlements.paymentsSaved} vs paying individually
+            </p>
+          )}
+          <Link
+            href={`/groups/${groupId}?tab=settle`}
+            className="mt-2 inline-block font-semibold text-foreground hover:underline"
+          >
+            View settle up →
+          </Link>
         </div>
       )}
     </div>

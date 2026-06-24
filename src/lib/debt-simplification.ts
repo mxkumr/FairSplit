@@ -10,6 +10,7 @@ export type NetBalance = {
 };
 
 export function simplifyDebts(netBalances: NetBalance[]): Settlement[] {
+  /** Greedy match of largest debtors to creditors — at most n−1 payments for n people. */
   const creditors = netBalances
     .filter((b) => b.amount > 0)
     .map((b) => ({ ...b }))

@@ -7,9 +7,8 @@ import {
   LogOut,
   Plus,
   UserRound,
-  Users,
-  Wallet,
 } from "lucide-react";
+import { FairSplitLogo } from "@/components/brand/FairSplitLogo";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -57,12 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border/60 bg-sidebar px-4 py-6 md:flex">
         <div className="mb-8 flex items-center justify-between gap-2 px-2">
-          <Link href="/" className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl gradient-brand text-brand-foreground shadow-soft">
-              <Wallet className="h-5 w-5" />
-            </div>
-            <span className="text-lg font-bold tracking-tight truncate">FairSplit</span>
-          </Link>
+          <FairSplitLogo size="md" href="/" />
           <ThemeToggle />
         </div>
 
@@ -118,12 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="md:pl-64">
         {/* Mobile top bar */}
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/60 glass px-4 md:hidden">
-          <Link href="/" className="flex items-center gap-2 font-bold">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-brand text-brand-foreground">
-              <Users className="h-4 w-4" />
-            </div>
-            FairSplit
-          </Link>
+          <FairSplitLogo size="sm" href="/" />
           <div className="flex items-center gap-1">
             <ThemeToggle />
             {data?.user && (

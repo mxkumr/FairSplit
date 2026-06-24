@@ -14,6 +14,10 @@ export const metadata: Metadata = {
   title: "FairSplit",
   description: "Free and open source Splitwise alternative - share expenses with friends",
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-icon.svg", type: "image/svg+xml" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

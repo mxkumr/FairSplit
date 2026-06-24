@@ -1,6 +1,7 @@
 "use client";
 
-import { use } from "react";
+import { use, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Star } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
@@ -13,7 +14,7 @@ import { GroupCurrencyProvider, useGroupCurrency } from "@/components/groups/Gro
 import { GroupQuickActions } from "@/components/groups/GroupQuickActions";
 import { GroupSettings } from "@/components/groups/GroupSettings";
 import { MemberBalances } from "@/components/groups/MemberBalances";
-import { RawBalancesTab } from "@/components/groups/RawBalancesTab";
+import { SimplifiedDebtsBanner } from "@/components/groups/SimplifiedDebtsBanner";
 import { SettleUpTab } from "@/components/groups/SettleUpTab";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -102,7 +103,91 @@ function GroupHero({
   );
 }
 
-export default function GroupPage({ params }: { params: Promise<{ groupId: string }> }) {
+function GroupTabs({
+  groupId,
+  group,
+  members,
+  me,
+  balances,
+  balancesLoading,
+  settlements,
+  settlementsLoading,
+  onDeleteExpense,
+}: {
+  groupId: string;
+  group: NonNullable<ReturnType<typeof useGroup>["data"]>["group"] | undefined;
+  members: { id: string; name: string; email: string }[];
+  me: ReturnType<typeof useMe>["data"];
+  balances: ReturnType<typeof useGroupBalances>["data"];
+  balancesLoading: boolean;
+  settlements: ReturnType<typeof useSettlements>["data"];
+  settlementsLoading: boolean;
+  onDeleteExpense: (expenseId: string) => void;
+}) {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const defaultTab =
+    tabParam === "settle" || tabParam === "log" || tabParam === "settings" ? tabParam : "activity";
+
+  const settleBadge =
+    settlements && settlements.transactionCount > 0 ? settlements.transactionCount : null;
+
+  return (
+    <Tabs defaultValue={defaultTab} key={defaultTab}>
+      <TabsList className="flex-wrap h-auto">
+        <TabsTrigger value="activity">Activity</TabsTrigger>
+        <TabsTrigger value="settle" className="gap-1.5">
+          Settle up
+          {settleBadge !== null && (
+            <span className="rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold text-brand-foreground">
+              {settleBadge}
+            </span>
+          )}
+        </TabsTrigger>
+        <TabsTrigger value="log">Log</TabsTrigger>
+        <TabsTrigger value="settings">Settings</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="activity">
+        {group && me?.user ? (
+          <ActivityFeed
+            expenses={group.expenses}
+            payments={group.payments ?? []}
+            groupId={groupId}
+            members={members}
+            currentUserId={me.user.id}
+            onDeleteExpense={onDeleteExpense}
+          />
+        ) : (
+          <p className="text-muted-foreground">Loading activity...</p>
+        )}
+      </TabsContent>
+
+      <TabsContent value="settle">
+        {settlementsLoading || balancesLoading ? (
+          <p className="text-muted-foreground">Loading settlements...</p>
+        ) : settlements && balances && me?.user ? (
+          <SettleUpTab
+            groupId={groupId}
+            settlements={settlements}
+            balances={balances}
+            currentUserId={me.user.id}
+          />
+        ) : null}
+      </TabsContent>
+
+      <TabsContent value="log">
+        <GroupActivityLog groupId={groupId} />
+      </TabsContent>
+
+      <TabsContent value="settings">
+        {group && <GroupSettings group={group} groupId={groupId} />}
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function GroupPageContent({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = use(params);
   const { data: me } = useMe();
   const { data: groupData, isLoading: groupLoading } = useGroup(groupId);
@@ -143,58 +228,21 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
               </section>
             )}
 
-            <Tabs defaultValue="activity">
-              <TabsList className="flex-wrap h-auto">
-                <TabsTrigger value="activity">Activity</TabsTrigger>
-                <TabsTrigger value="settle">Settle Up</TabsTrigger>
-                <TabsTrigger value="balances">Balances</TabsTrigger>
-                <TabsTrigger value="log">Log</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
-              </TabsList>
+            {settlements && !settlementsLoading && (
+              <SimplifiedDebtsBanner settlements={settlements} groupId={groupId} />
+            )}
 
-              <TabsContent value="activity">
-                {group && me?.user ? (
-                  <ActivityFeed
-                    expenses={group.expenses}
-                    payments={group.payments ?? []}
-                    groupId={groupId}
-                    members={members}
-                    currentUserId={me.user.id}
-                    onDeleteExpense={handleDeleteExpense}
-                  />
-                ) : (
-                  <p className="text-muted-foreground">Loading activity...</p>
-                )}
-              </TabsContent>
-
-              <TabsContent value="settle">
-                {settlementsLoading ? (
-                  <p className="text-muted-foreground">Loading settlements...</p>
-                ) : settlements && me?.user ? (
-                  <SettleUpTab
-                    groupId={groupId}
-                    settlements={settlements}
-                    currentUserId={me.user.id}
-                  />
-                ) : null}
-              </TabsContent>
-
-              <TabsContent value="balances">
-                {balancesLoading ? (
-                  <p className="text-muted-foreground">Loading balances...</p>
-                ) : balances ? (
-                  <RawBalancesTab balances={balances} />
-                ) : null}
-              </TabsContent>
-
-              <TabsContent value="log">
-                <GroupActivityLog groupId={groupId} />
-              </TabsContent>
-
-              <TabsContent value="settings">
-                {group && <GroupSettings group={group} groupId={groupId} />}
-              </TabsContent>
-            </Tabs>
+            <GroupTabs
+              groupId={groupId}
+              group={group}
+              members={members}
+              me={me}
+              balances={balances}
+              balancesLoading={balancesLoading}
+              settlements={settlements}
+              settlementsLoading={settlementsLoading}
+              onDeleteExpense={handleDeleteExpense}
+            />
           </div>
 
           {/* Desktop sticky sidebar - event checkout style */}
@@ -205,6 +253,7 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
                 members={members}
                 currentUserId={me.user.id}
                 balances={balances}
+                settlements={settlements}
               />
             )}
           </aside>
@@ -222,5 +271,13 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
         )}
       </GroupCurrencyProvider>
     </AppShell>
+  );
+}
+
+export default function GroupPage({ params }: { params: Promise<{ groupId: string }> }) {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <GroupPageContent params={params} />
+    </Suspense>
   );
 }

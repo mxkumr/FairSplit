@@ -4,18 +4,20 @@
   "description": "Free and open source Splitwise alternative",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#3b5bdb",
+  "background_color": "#000000",
+  "theme_color": "#FF4B5C",
   "icons": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon.svg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ]
 }
