@@ -15,6 +15,7 @@ import { GroupQuickActions } from "@/components/groups/GroupQuickActions";
 import { GroupSettings } from "@/components/groups/GroupSettings";
 import { MemberBalances } from "@/components/groups/MemberBalances";
 import { SimplifiedDebtsBanner } from "@/components/groups/SimplifiedDebtsBanner";
+import { YourSettleUpBanner } from "@/components/groups/YourSettleUpBanner";
 import { SettleUpTab } from "@/components/groups/SettleUpTab";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -224,6 +225,16 @@ function GroupPageContent({ params }: { params: Promise<{ groupId: string }> }) 
                 membersCount={members.length}
                 onToggleFavorite={() => toggleFavorite.mutate()}
                 isFavorite={group.isFavorite}
+              />
+            )}
+
+            {me?.user && (
+              <YourSettleUpBanner
+                groupId={groupId}
+                currentUserId={me.user.id}
+                balances={balances}
+                settlements={settlements}
+                isLoading={balancesLoading || settlementsLoading}
               />
             )}
 
