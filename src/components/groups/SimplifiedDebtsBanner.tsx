@@ -1,10 +1,10 @@
 "use client";
 
 import { ArrowRight, Sparkles } from "lucide-react";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useGoToSettleUpTab } from "@/components/groups/group-tab-context";
 import { formatCents } from "@/lib/money";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import type { SettlementResponse } from "@/lib/api-client";
@@ -17,6 +17,7 @@ export function SimplifiedDebtsBanner({
   groupId: string;
 }) {
   const { currencySymbol } = useGroupCurrency();
+  const goToSettleUp = useGoToSettleUpTab();
 
   if (settlements.settlements.length === 0) {
     return null;
@@ -78,8 +79,8 @@ export function SimplifiedDebtsBanner({
           </p>
         )}
 
-        <Button variant="brand" size="sm" className="mt-4" asChild>
-          <Link href={`/groups/${groupId}?tab=settle`}>View all & record payments</Link>
+        <Button variant="brand" size="sm" className="mt-4" onClick={goToSettleUp}>
+          View all & record payments
         </Button>
       </CardContent>
     </Card>

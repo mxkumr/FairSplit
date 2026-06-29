@@ -1,7 +1,6 @@
 "use client";
 
 import { use, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Star } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
@@ -12,6 +11,7 @@ import { GroupActivityLog } from "@/components/groups/GroupActivityLog";
 import { GroupCurrencyProvider, useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import { GroupMemberPreview } from "@/components/groups/GroupMemberPreview";
 import { GroupQuickActions } from "@/components/groups/GroupQuickActions";
+import { GroupTabProvider, useGroupTab } from "@/components/groups/group-tab-context";
 import { GroupSettings } from "@/components/groups/GroupSettings";
 import { MemberBalances } from "@/components/groups/MemberBalances";
 import { SimplifiedDebtsBanner } from "@/components/groups/SimplifiedDebtsBanner";
@@ -129,16 +129,14 @@ function GroupTabs({
   settlementsLoading: boolean;
   onDeleteExpense: (expenseId: string) => void;
 }) {
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const defaultTab =
-    tabParam === "settle" || tabParam === "log" || tabParam === "settings" ? tabParam : "activity";
+  const { activeTab, setActiveTab, tabsRef } = useGroupTab();
 
   const settleBadge =
     settlements && settlements.transactionCount > 0 ? settlements.transactionCount : null;
 
   return (
-    <Tabs defaultValue={defaultTab} key={defaultTab}>
+    <div id="group-tabs" ref={tabsRef} className="scroll-mt-6">
+    <Tabs value={activeTab} onValueChange={(tab) => setActiveTab(tab as typeof activeTab)}>
       <TabsList className="flex-wrap h-auto">
         <TabsTrigger value="activity">Activity</TabsTrigger>
         <TabsTrigger value="settle" className="gap-1.5">
@@ -192,6 +190,7 @@ function GroupTabs({
         {group && <GroupSettings group={group} groupId={groupId} />}
       </TabsContent>
     </Tabs>
+    </div>
   );
 }
 
@@ -216,6 +215,7 @@ function GroupPageContent({ params }: { params: Promise<{ groupId: string }> }) 
   return (
     <AppShell>
       <GroupCurrencyProvider currency={group?.currency ?? "USD"}>
+        <GroupTabProvider>
         <div className="space-y-6 lg:grid lg:grid-cols-[1fr_340px] lg:items-start lg:gap-8">
           <div className="space-y-6">
             {groupLoading || !group ? (
@@ -278,6 +278,7 @@ function GroupPageContent({ params }: { params: Promise<{ groupId: string }> }) 
             )}
           </aside>
         </div>
+        </GroupTabProvider>
       </GroupCurrencyProvider>
     </AppShell>
   );

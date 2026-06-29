@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
+import { useGoToSettleUpTab } from "@/components/groups/group-tab-context";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import { formatCents } from "@/lib/money";
 import type { AuthUser, BalanceResponse, SettlementResponse } from "@/lib/api-client";
@@ -20,6 +20,7 @@ export function GroupQuickActions({
   settlements?: SettlementResponse;
 }) {
   const { currencySymbol } = useGroupCurrency();
+  const goToSettleUp = useGoToSettleUpTab();
   const net = balances?.netBalances.find((b) => b.userId === currentUserId)?.amount ?? 0;
 
   return (
@@ -60,12 +61,13 @@ export function GroupQuickActions({
               Saves {settlements.paymentsSaved} vs paying individually
             </p>
           )}
-          <Link
-            href={`/groups/${groupId}?tab=settle`}
+          <button
+            type="button"
+            onClick={goToSettleUp}
             className="mt-2 inline-block font-semibold text-foreground hover:underline"
           >
             View settle up →
-          </Link>
+          </button>
         </div>
       )}
     </div>

@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowRight, CheckCircle2, Wallet } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { GroupTabProvider, useGoToSettleUpTab } from "@/components/groups/group-tab-context";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import { formatCents } from "@/lib/money";
 import type { BalanceResponse, SettlementResponse } from "@/lib/api-client";
@@ -32,6 +32,7 @@ export function YourSettleUpBanner({
   isLoading?: boolean;
 }) {
   const { currencySymbol } = useGroupCurrency();
+  const goToSettleUp = useGoToSettleUpTab();
 
   if (isLoading) {
     return (
@@ -102,8 +103,8 @@ export function YourSettleUpBanner({
               )}
             </div>
           </div>
-          <Button variant="brand" size="sm" className="shrink-0" asChild>
-            <Link href={`/groups/${groupId}?tab=settle`}>Settle up</Link>
+          <Button variant="brand" size="sm" className="shrink-0" onClick={goToSettleUp}>
+            Settle up
           </Button>
         </div>
 
