@@ -48,6 +48,7 @@ export function serializeGroup(group: {
   information: string | null;
   currency: string;
   currencySymbol: string;
+  settlementMode?: "SIMPLIFIED" | "DIRECT";
   createdAt: Date;
   members: {
     isFavorite?: boolean;
@@ -70,6 +71,7 @@ export function serializeGroup(group: {
     information: group.information,
     currency: group.currency,
     currencySymbol: group.currencySymbol,
+    settlementMode: group.settlementMode === "DIRECT" ? "direct" : "simplified",
     createdAt: group.createdAt.toISOString(),
     members: group.members.map((m) => ({
       isFavorite: m.isFavorite ?? false,

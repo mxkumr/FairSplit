@@ -69,9 +69,21 @@ export async function PATCH(request: Request, context: RouteContext) {
       return jsonError(parsed.error.errors[0]?.message ?? "Invalid input", 400);
     }
 
-    const updateData = { ...parsed.data };
+    const { settlementMode, ...rest } = parsed.data;
+    const updateData: {
+      name?: string;
+      information?: string | null;
+      currency?: string;
+      currencySymbol?: string;
+      settlementMode?: "SIMPLIFIED" | "DIRECT";
+    } = { ...rest };
+
     if (updateData.currency) {
       updateData.currencySymbol = getCurrencySymbol(updateData.currency);
+    }
+
+    if (settlementMode) {
+      updateData.settlementMode = settlementMode === "direct" ? "DIRECT" : "SIMPLIFIED";
     }
 
     const group = await prisma.group.update({
@@ -94,6 +106,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         information: group.information,
         currency: group.currency,
         currencySymbol: group.currencySymbol,
+        settlementMode: group.settlementMode === "DIRECT" ? "direct" : "simplified",
       },
     });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeGroupBalances } from "../balances";
 import {
+  buildPayerSettlementSummary,
   buildSettlementExplanation,
   buildUserBalanceExplanation,
 } from "../balance-explanation";
@@ -132,5 +133,32 @@ describe("buildUserBalanceExplanation", () => {
     expect(summary).toContain("€0.12");
     expect(summary).not.toContain("€0.72");
     expect(summary).toContain("settle up");
+  });
+});
+
+describe("buildPayerSettlementSummary", () => {
+  it("names the recipient for a single payment", () => {
+    expect(
+      buildPayerSettlementSummary({
+        payerName: "Manish Kumar",
+        payments: [{ toName: "Niranjan Madan", amount: 74 }],
+        currencySymbol: "€",
+      }),
+    ).toBe("Manish Kumar pays Niranjan Madan €0.74 to settle up.");
+  });
+
+  it("lists every recipient for multiple payments", () => {
+    expect(
+      buildPayerSettlementSummary({
+        payerName: "Raveena Ramamurthy",
+        payments: [
+          { toName: "Niranjan Madan", amount: 60 },
+          { toName: "Jishitha", amount: 12 },
+        ],
+        currencySymbol: "€",
+      }),
+    ).toBe(
+      "Raveena Ramamurthy pays Niranjan Madan €0.60 and Jishitha €0.12 to settle up.",
+    );
   });
 });

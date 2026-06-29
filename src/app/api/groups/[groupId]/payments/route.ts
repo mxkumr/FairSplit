@@ -65,17 +65,27 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const { expenses, payments: existingPayments } = await getGroupBalanceData(groupId);
-    const { debts } = computeGroupBalances(expenses, existingPayments);
+    const { netBalances } = computeGroupBalances(expenses, existingPayments);
 
-    const debt = debts.find(
-      (d) => d.fromUserId === fromUserId && d.toUserId === toUserId,
-    );
+    const payerNet = netBalances.find((balance) => balance.userId === fromUserId)?.amount ?? 0;
+    const recipientNet =
+      netBalances.find((balance) => balance.userId === toUserId)?.amount ?? 0;
 
-    if (!debt || debt.amount < amount) {
-      return jsonError(
-        `Payment exceeds outstanding debt of ${debt?.amount ?? 0} cents`,
-        400,
-      );
+    if (payerNet >= 0) {
+      return jsonError("Payer has no outstanding debt in this group", 400);
+    }
+
+    if (recipientNet <= 0) {
+      return jsonError("Recipient is not owed money in this group", 400);
+    }
+
+    const maxPayerAmount = Math.abs(payerNet);
+    if (amount > maxPayerAmount) {
+      return jsonError(`Payment exceeds payer net debt of ${maxPayerAmount} cents`, 400);
+    }
+
+    if (amount > recipientNet) {
+      return jsonError(`Payment exceeds recipient net credit of ${recipientNet} cents`, 400);
     }
 
     const payment = await prisma.payment.create({

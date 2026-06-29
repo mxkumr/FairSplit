@@ -101,6 +101,7 @@ export function useUpdateGroup(groupId: string) {
       );
       queryClient.invalidateQueries({ queryKey: ["groups", groupId] });
       queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["groups", groupId, "settlements"] });
     },
   });
 }

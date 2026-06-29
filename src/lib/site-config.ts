@@ -1,6 +1,6 @@
 export const CREATOR = {
   name: "Manish Kumar",
-  role: "Built FairSplit - open source Splitwise alternative",
+  role: "Built FairSplit - open source expense sharing",
   avatarUrl: "https://github.com/mxkumr.png",
   githubUrl: "https://github.com/mxkumr/FairSplit",
   linkedInUrl: "https://www.linkedin.com/in/manish-kumar-b-175a701b0/",

@@ -22,6 +22,11 @@ enum RecurrenceRule {
   MONTHLY
 }
 
+enum GroupSettlementMode {
+  SIMPLIFIED
+  DIRECT
+}
+
 enum ActivityType {
   CREATE_GROUP
   UPDATE_GROUP
@@ -92,15 +97,16 @@ model Category {
 }
 
 model Group {
-  id              String   @id @default(cuid())
+  id              String               @id @default(cuid())
   name            String
   information     String?
-  currency        String   @default("USD")
-  currencySymbol  String   @default("$") @map("currency_symbol")
-  inviteToken     String?  @unique @map("invite_token")
-  createdByUserId String   @map("created_by")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  currency        String               @default("USD")
+  currencySymbol  String               @default("$") @map("currency_symbol")
+  settlementMode  GroupSettlementMode  @default(SIMPLIFIED) @map("settlement_mode")
+  inviteToken     String?              @unique @map("invite_token")
+  createdByUserId String               @map("created_by")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
 
   createdBy  User          @relation("GroupCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   members    GroupMember[]

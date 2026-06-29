@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s · FairSplit",
   },
   description:
-    "Free, open-source expense sharing for friends and groups. Split bills, simplify debts, settle up, and invite via link - a modern Splitwise alternative.",
+    "Free, open-source expense sharing for friends and groups. Split bills, simplify debts, settle up, and invite via link.",
   manifest: "/manifest.json",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],

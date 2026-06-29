@@ -52,7 +52,7 @@ export const TERMS_OF_SERVICE_SECTIONS: LegalSection[] = [
       "Attempt to access other users' accounts or data without authorization.",
       "Reverse engineer, scrape, or overload the Service in ways that impair others.",
       "Impersonate another person or misrepresent your affiliation with any entity.",
-      "Use FairSplit branding to imply endorsement by Splitwise or any other third party.",
+      "Use FairSplit branding to imply endorsement by any other third party.",
     ],
   },
   {
@@ -68,7 +68,7 @@ export const TERMS_OF_SERVICE_SECTIONS: LegalSection[] = [
     id: "intellectual-property",
     title: "8. Intellectual property",
     paragraphs: [
-      "The FairSplit name, logo, and original application design are owned by the project operator. Third-party trademarks (such as Splitwise) belong to their respective owners; FairSplit is not affiliated with or endorsed by them.",
+      "The FairSplit name, logo, and original application design are owned by the project operator. Third-party trademarks belong to their respective owners; FairSplit is not affiliated with or endorsed by them.",
       "Source code for FairSplit is released under the MIT License unless otherwise noted in the repository. See the LICENSE file at https://github.com/mxkumr/FairSplit.",
     ],
   },

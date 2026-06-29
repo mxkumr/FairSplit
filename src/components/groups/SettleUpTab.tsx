@@ -16,13 +16,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SettlementExplanation } from "@/components/groups/SettlementExplanation";
+import { buildPayerSettlementSummary } from "@/lib/balance-explanation";
 import { useRecordPayment } from "@/hooks/use-api";
 import { formatCents, parseDollarsToCents } from "@/lib/money";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import { cn } from "@/lib/utils";
-import type { AuthUser, BalanceResponse, SettlementResponse } from "@/lib/api-client";
+import type { AuthUser, BalanceResponse, SettlementItem, SettlementModeKey, SettlementResponse } from "@/lib/api-client";
+import {
+  SimplifyDebtsSwitch,
+  settlementModeDescription,
+  settlementModeFromSwitch,
+} from "@/components/groups/SettlementModeToggle";
 
-type SettlementItem = SettlementResponse["settlements"][0];
 type DebtItem = BalanceResponse["debts"][0];
 
 function getInitials(name: string) {
@@ -102,6 +107,11 @@ function PayerSettlementCard({
   const payerName = group.fromUser.name;
   const explanation = group.items[0]?.explanation;
   const splits = [...group.items].sort((a, b) => b.amount - a.amount);
+  const paymentSummary = buildPayerSettlementSummary({
+    payerName,
+    payments: splits.map((split) => ({ toName: split.toUser.name, amount: split.amount })),
+    currencySymbol,
+  });
 
   return (
     <Card>
@@ -144,7 +154,7 @@ function PayerSettlementCard({
             {explanation && (
               <SettlementExplanation
                 lines={explanation.lines}
-                summary={`${payerName} pays ${formatCents(group.totalAmount, currencySymbol)} total across ${splits.length} ${splits.length === 1 ? "person" : "people"} to settle the group.`}
+                summary={paymentSummary}
                 payerName={payerName}
                 defaultOpen={group.fromUserId === currentUserId}
               />
@@ -257,15 +267,20 @@ export function SettleUpTab({
   settlements,
   balances,
   currentUserId,
+  defaultSettlementMode,
 }: {
   groupId: string;
   settlements: SettlementResponse;
   balances: BalanceResponse;
   currentUserId: string;
+  defaultSettlementMode?: SettlementModeKey;
 }) {
   const { currencySymbol } = useGroupCurrency();
   const recordPayment = useRecordPayment(groupId);
-  const [simplifyDebts, setSimplifyDebts] = useState(true);
+  const [simplifyEnabled, setSimplifyEnabled] = useState(
+    (defaultSettlementMode ?? settlements.defaultMode ?? "simplified") === "simplified",
+  );
+  const settlementMode = settlementModeFromSwitch(simplifyEnabled);
   const [expandedPayerId, setExpandedPayerId] = useState<string | null>(null);
   const [recording, setRecording] = useState<{
     fromUserId: string;
@@ -278,24 +293,26 @@ export function SettleUpTab({
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const { rawDebtCount, transactionCount, paymentsSaved } = settlements;
-  const showSimplified = simplifyDebts && settlements.settlements.length > 0;
-  const isEmpty = showSimplified
-    ? settlements.settlements.length === 0
-    : balances.debts.length === 0;
+  const { rawDebtCount, modes } = settlements;
+  const activeMode = modes[settlementMode];
+  const transactionCount = activeMode.transactionCount;
+  const paymentsSaved = activeMode.paymentsSaved;
+  const activeSettlements = activeMode.settlements;
+  const isEmpty = activeSettlements.length === 0;
 
-  const groupedSettlements = useMemo(
-    () => groupByPayer(settlements.settlements),
-    [settlements.settlements],
-  );
-
-  const groupedDebts = useMemo(() => groupByPayer(balances.debts), [balances.debts]);
+  const groupedSettlements = useMemo(() => {
+    const grouped = groupByPayer(activeSettlements);
+    return grouped.sort((a, b) => {
+      if (a.fromUserId === currentUserId) return -1;
+      if (b.fromUserId === currentUserId) return 1;
+      return b.totalAmount - a.totalAmount;
+    });
+  }, [activeSettlements, currentUserId]);
 
   const defaultExpandedPayer = useMemo(() => {
-    const payerGroups = showSimplified ? groupedSettlements : groupedDebts;
-    const mine = payerGroups.find((g) => g.fromUserId === currentUserId);
-    return mine?.fromUserId ?? payerGroups[0]?.fromUserId ?? null;
-  }, [showSimplified, groupedSettlements, groupedDebts, currentUserId]);
+    const mine = groupedSettlements.find((g) => g.fromUserId === currentUserId);
+    return mine?.fromUserId ?? groupedSettlements[0]?.fromUserId ?? null;
+  }, [groupedSettlements, currentUserId]);
 
   const [hasToggledExpand, setHasToggledExpand] = useState(false);
   const activeExpandedId = hasToggledExpand ? expandedPayerId : defaultExpandedPayer;
@@ -349,66 +366,47 @@ export function SettleUpTab({
   return (
     <>
       <div className="space-y-4">
-        <Card className="border-border/80">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-brand" />
-                  <p className="font-semibold">Simplify debts</p>
+        {!isEmpty && rawDebtCount > 0 && (
+          <Card className="border-border/80">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-brand shrink-0" />
+                    <p className="font-semibold">Simplify debts</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {settlementModeDescription(settlementMode)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Turn this on after you have added all expenses to the group.
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground max-w-lg">
-                  Combine everyone&apos;s balances into the fewest payments. Great for large groups
-                  - e.g. 10 people with many expenses may only need a handful of transfers.
-                </p>
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <SimplifyDebtsSwitch
+                    enabled={simplifyEnabled}
+                    onChange={(enabled) => {
+                      setSimplifyEnabled(enabled);
+                      setHasToggledExpand(false);
+                      setExpandedPayerId(null);
+                    }}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {simplifyEnabled ? "On" : "Off"}
+                  </span>
+                </div>
               </div>
-              <div className="flex rounded-full border border-border p-1 bg-muted/40 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSimplifyDebts(true);
-                    setHasToggledExpand(false);
-                    setExpandedPayerId(null);
-                  }}
-                  className={cn(
-                    "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
-                    simplifyDebts
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Simplified
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSimplifyDebts(false);
-                    setHasToggledExpand(false);
-                    setExpandedPayerId(null);
-                  }}
-                  className={cn(
-                    "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
-                    !simplifyDebts
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  All debts
-                </button>
-              </div>
-            </div>
 
-            {simplifyDebts && rawDebtCount > 0 && (
               <div className="mt-4 flex flex-wrap gap-3 text-sm">
                 <div className="rounded-2xl bg-muted/60 px-3 py-2">
-                  <span className="text-muted-foreground">Without simplification: </span>
+                  <span className="text-muted-foreground">Expense debts: </span>
                   <span className="font-semibold">{rawDebtCount} payments</span>
                 </div>
                 <div className="rounded-2xl bg-brand/10 px-3 py-2">
-                  <span className="text-muted-foreground">Simplified: </span>
+                  <span className="text-muted-foreground">This view: </span>
                   <span className="font-semibold text-brand">{transactionCount} payments</span>
                 </div>
-                {paymentsSaved > 0 && (
+                {paymentsSaved > 0 && simplifyEnabled && (
                   <div className="rounded-2xl bg-success-muted px-3 py-2 text-success-foreground">
                     <span className="font-semibold">
                       Save {paymentsSaved} transaction{paymentsSaved === 1 ? "" : "s"}
@@ -416,9 +414,9 @@ export function SettleUpTab({
                   </div>
                 )}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {isEmpty ? (
           <Card>
@@ -426,7 +424,7 @@ export function SettleUpTab({
               All settled up! No payments needed.
             </CardContent>
           </Card>
-        ) : showSimplified ? (
+        ) : (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Tap a person to see who they pay and record payments.
@@ -440,21 +438,6 @@ export function SettleUpTab({
                 expanded={activeExpandedId === group.fromUserId}
                 onToggle={() => togglePayer(group.fromUserId)}
                 onRecord={openRecord}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Every individual debt between members, grouped by who owes. Tap to see the split.
-            </p>
-            {groupedDebts.map((group) => (
-              <PayerDebtCard
-                key={group.fromUserId}
-                group={group}
-                currencySymbol={currencySymbol}
-                expanded={activeExpandedId === group.fromUserId}
-                onToggle={() => togglePayer(group.fromUserId)}
               />
             ))}
           </div>

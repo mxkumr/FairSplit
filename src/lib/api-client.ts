@@ -84,12 +84,15 @@ export type GroupMember = {
   user: AuthUser;
 };
 
+export type SettlementModeKey = "simplified" | "direct";
+
 export type GroupDetail = {
   id: string;
   name: string;
   information: string | null;
   currency: string;
   currencySymbol: string;
+  settlementMode: SettlementModeKey;
   isFavorite: boolean;
   createdAt: string;
   members: GroupMember[];
@@ -128,21 +131,31 @@ export type SettlementExplanationLine = {
   sortDate: string;
 };
 
+export type SettlementItem = {
+  fromUserId: string;
+  toUserId: string;
+  amount: number;
+  fromUser: AuthUser;
+  toUser: AuthUser;
+  explanation: {
+    lines: SettlementExplanationLine[];
+    summary: string;
+  };
+};
+
+export type SettlementModeResult = {
+  settlements: SettlementItem[];
+  transactionCount: number;
+  paymentsSaved: number;
+};
+
 export type SettlementResponse = {
-  settlements: {
-    fromUserId: string;
-    toUserId: string;
-    amount: number;
-    fromUser: AuthUser;
-    toUser: AuthUser;
-    explanation: {
-      lines: SettlementExplanationLine[];
-      summary: string;
-    };
-  }[];
+  defaultMode: SettlementModeKey;
+  settlements: SettlementItem[];
   transactionCount: number;
   rawDebtCount: number;
   paymentsSaved: number;
+  modes: Record<SettlementModeKey, SettlementModeResult>;
 };
 
 export type FriendItem = {
@@ -259,6 +272,7 @@ export const api = {
       information?: string | null;
       currency?: string;
       currencySymbol?: string;
+      settlementMode?: SettlementModeKey;
     },
   ) =>
     fetch(`/api/groups/${groupId}`, {

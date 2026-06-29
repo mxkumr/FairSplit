@@ -2,7 +2,7 @@
 
 **Free, open-source expense sharing for friends, roommates, and travel groups.**
 
-FairSplit is a modern [Splitwise](https://www.splitwise.com)-style app for tracking shared costs, splitting bills fairly, and settling up - without paywalls or premium-only features. Built with Next.js, TypeScript, and PostgreSQL.
+FairSplit is a modern app for tracking shared costs, splitting bills fairly, and settling up - without paywalls or premium-only features. Built with Next.js, TypeScript, and PostgreSQL.
 
 **Live demo:** [fairsplit.thecrudstudio.com](https://fairsplit.thecrudstudio.com)
 
@@ -179,7 +179,7 @@ Questions? Reach out via [GitHub Issues](https://github.com/mxkumr/FairSplit/iss
 - [Privacy Policy](https://fairsplit.thecrudstudio.com/privacy)
 - [Terms of Service](https://fairsplit.thecrudstudio.com/terms)
 
-FairSplit is not affiliated with or endorsed by Splitwise.
+FairSplit is an independent open-source project and is not affiliated with or endorsed by any third-party expense-sharing service.
 
 ---
 

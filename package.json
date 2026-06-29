@@ -1,7 +1,7 @@
 {
   "name": "fairsplit",
   "version": "0.1.0",
-  "description": "Free, open-source expense sharing app - split bills with friends, simplify debts, and settle up. A modern Splitwise alternative built with Next.js and PostgreSQL.",
+  "description": "Free, open-source expense sharing app - split bills with friends, simplify debts, and settle up. Built with Next.js and PostgreSQL.",
   "private": true,
   "license": "MIT",
   "scripts": {

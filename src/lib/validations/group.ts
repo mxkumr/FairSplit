@@ -13,6 +13,7 @@ export const updateGroupSchema = z.object({
   information: z.string().max(1000).optional().nullable(),
   currency: z.string().max(10).optional(),
   currencySymbol: z.string().max(5).optional(),
+  settlementMode: z.enum(["simplified", "direct"]).optional(),
 });
 
 export const addMemberSchema = z

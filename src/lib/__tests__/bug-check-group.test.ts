@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeGroupBalances } from "../balances";
 import { buildUserBalanceExplanation } from "../balance-explanation";
-import { simplifyDebts, simplifyDebtsPreferDirect } from "../debt-simplification";
+import { simplifyDebts, simplifyDebtsPreferDirect, validateSettlements } from "../debt-simplification";
 import {
   BUG_CHECK_EXPECTED_NET_CENTS,
   BUG_CHECK_MEMBERS,
@@ -23,6 +23,13 @@ function netByKey(netBalances: { userId: string; amount: number }[]) {
     map.set(key, entry?.amount ?? 0);
   }
   return map;
+}
+
+function simplifyBugCheck() {
+  const { netBalances, debts } = computeGroupBalances(expenses, payments);
+  const nets = netBalances.map((b) => ({ userId: b.userId, amount: b.amount }));
+  const settlements = simplifyDebts(nets);
+  return { netBalances, debts, nets, settlements };
 }
 
 describe("bug-check group (11 members, EUR)", () => {
@@ -74,14 +81,7 @@ describe("bug-check group (11 members, EUR)", () => {
   });
 
   it("simplified settlements from each debtor sum to their net debt", () => {
-    const settlements = simplifyDebtsPreferDirect(
-      netBalances.map((b) => ({ userId: b.userId, amount: b.amount })),
-      debts.map((d) => ({
-        fromUserId: d.fromUserId,
-        toUserId: d.toUserId,
-        amount: d.amount,
-      })),
-    );
+    const { settlements } = simplifyBugCheck();
 
     for (const member of BUG_CHECK_MEMBERS) {
       const net = nets.get(member.key) ?? 0;
@@ -95,30 +95,13 @@ describe("bug-check group (11 members, EUR)", () => {
     }
   });
 
-  it("Anuraag pays Niranjan €0.45 (not Jishitha after settling flower pot)", () => {
-    const settlements = simplifyDebtsPreferDirect(
-      netBalances.map((b) => ({ userId: b.userId, amount: b.amount })),
-      debts.map((d) => ({
-        fromUserId: d.fromUserId,
-        toUserId: d.toUserId,
-        amount: d.amount,
-      })),
-    );
-    const anuraagPayments = settlements.filter((s) => s.fromUserId === "anuraag");
-    expect(anuraagPayments).toEqual([
-      { fromUserId: "anuraag", toUserId: "niranjan", amount: 45 },
-    ]);
+  it("simplified settlements respect net balances for every member", () => {
+    const { nets: netList, settlements } = simplifyBugCheck();
+    expect(validateSettlements(settlements, netList).valid).toBe(true);
   });
 
   it("Raveena simplified payments total €0.72", () => {
-    const settlements = simplifyDebtsPreferDirect(
-      netBalances.map((b) => ({ userId: b.userId, amount: b.amount })),
-      debts.map((d) => ({
-        fromUserId: d.fromUserId,
-        toUserId: d.toUserId,
-        amount: d.amount,
-      })),
-    );
+    const { settlements } = simplifyBugCheck();
     const raveenaPays = settlements
       .filter((s) => s.fromUserId === "raveena")
       .reduce((sum, s) => sum + s.amount, 0);
@@ -132,15 +115,29 @@ describe("bug-check group (11 members, EUR)", () => {
     expect(payments[0].toUserId).toBe("jishitha");
   });
 
-  it("raw debt count is greater than or equal to simplified settlement count", () => {
-    const settlements = simplifyDebtsPreferDirect(
-      netBalances.map((b) => ({ userId: b.userId, amount: b.amount })),
-      debts.map((d) => ({
-        fromUserId: d.fromUserId,
-        toUserId: d.toUserId,
-        amount: d.amount,
-      })),
-    );
-    expect(debts.length).toBeGreaterThanOrEqual(settlements.length);
+  it("raw debt count is greater than simplified settlement count", () => {
+    const { settlements } = simplifyBugCheck();
+    expect(debts.length).toBeGreaterThan(settlements.length);
+  });
+
+  it("simplified mode uses 10 payments for the bug-check group", () => {
+    const { settlements } = simplifyBugCheck();
+    expect(debts.length).toBe(18);
+    expect(settlements.length).toBe(10);
+  });
+
+  it("direct mode keeps expense creditors when possible", () => {
+    const nets = netBalances.map((b) => ({ userId: b.userId, amount: b.amount }));
+    const directDebts = debts.map((d) => ({
+      fromUserId: d.fromUserId,
+      toUserId: d.toUserId,
+      amount: d.amount,
+    }));
+    const direct = simplifyDebtsPreferDirect(nets, directDebts);
+
+    expect(direct.length).toBe(17);
+    expect(direct.filter((s) => s.fromUserId === "anuraag")).toEqual([
+      { fromUserId: "anuraag", toUserId: "niranjan", amount: 45 },
+    ]);
   });
 });

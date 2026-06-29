@@ -177,6 +177,7 @@ function GroupTabs({
             settlements={settlements}
             balances={balances}
             currentUserId={me.user.id}
+            defaultSettlementMode={group?.settlementMode}
           />
         ) : null}
       </TabsContent>

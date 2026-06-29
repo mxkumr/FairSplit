@@ -170,3 +170,26 @@ export function buildSettlementExplanation(params: {
 
   return { lines, summary };
 }
+
+export function buildPayerSettlementSummary(params: {
+  payerName: string;
+  payments: { toName: string; amount: number }[];
+  currencySymbol?: string;
+}): string {
+  const { payerName, payments, currencySymbol = "$" } = params;
+
+  if (payments.length === 0) {
+    return `${payerName} has no payments to make in this group.`;
+  }
+
+  const formatted = payments.map(
+    (payment) => `${payment.toName} ${formatCents(payment.amount, currencySymbol)}`,
+  );
+
+  if (formatted.length === 1) {
+    return `${payerName} pays ${formatted[0]} to settle up.`;
+  }
+
+  const last = formatted.pop();
+  return `${payerName} pays ${formatted.join(", ")} and ${last} to settle up.`;
+}
