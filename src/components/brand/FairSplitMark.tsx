@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** Shared FairSplit icon mark — receipt split down the middle */
+/** Shared FairSplit icon mark - receipt split down the middle */
 export function FairSplitMark({ className }: { className?: string }) {
   return (
     <svg

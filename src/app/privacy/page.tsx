@@ -3,7 +3,7 @@ import { LegalDocumentPage } from "@/components/legal/LegalDocumentPage";
 import { PRIVACY_POLICY_SECTIONS } from "@/lib/legal/privacy-policy";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — FairSplit",
+  title: "Privacy Policy - FairSplit",
   description: "How FairSplit collects, uses, and protects your information.",
 };
 

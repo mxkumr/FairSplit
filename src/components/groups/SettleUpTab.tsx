@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowRight, CheckCircle, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowRight, CheckCircle, ChevronDown, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,10 @@ import { useRecordPayment } from "@/hooks/use-api";
 import { formatCents, parseDollarsToCents } from "@/lib/money";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import { cn } from "@/lib/utils";
-import type { BalanceResponse, SettlementResponse } from "@/lib/api-client";
+import type { AuthUser, BalanceResponse, SettlementResponse } from "@/lib/api-client";
+
+type SettlementItem = SettlementResponse["settlements"][0];
+type DebtItem = BalanceResponse["debts"][0];
 
 function getInitials(name: string) {
   return name
@@ -31,48 +34,218 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
-function DebtRow({
-  fromName,
+function groupByPayer<T extends { fromUserId: string; fromUser: AuthUser; amount: number }>(
+  items: T[],
+) {
+  const map = new Map<
+    string,
+    { fromUserId: string; fromUser: AuthUser; totalAmount: number; items: T[] }
+  >();
+
+  for (const item of items) {
+    const existing = map.get(item.fromUserId);
+    if (existing) {
+      existing.totalAmount += item.amount;
+      existing.items.push(item);
+    } else {
+      map.set(item.fromUserId, {
+        fromUserId: item.fromUserId,
+        fromUser: item.fromUser,
+        totalAmount: item.amount,
+        items: [item],
+      });
+    }
+  }
+
+  return [...map.values()].sort((a, b) => b.totalAmount - a.totalAmount);
+}
+
+function PaymentSplitRow({
   toName,
   amount,
   currencySymbol,
   action,
-  explanation,
-  payerName,
-  explanationOpen,
 }: {
-  fromName: string;
   toName: string;
   amount: number;
   currencySymbol: string;
   action?: React.ReactNode;
-  explanation?: SettlementResponse["settlements"][0]["explanation"];
-  payerName?: string;
-  explanationOpen?: boolean;
 }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-background/60 px-3 py-2.5 border border-border/50">
+      <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+      <Avatar className="h-7 w-7">
+        <AvatarFallback className="text-[10px]">{getInitials(toName)}</AvatarFallback>
+      </Avatar>
+      <span className="text-sm font-medium flex-1 min-w-0 truncate">{toName}</span>
+      <Badge variant="default">{formatCents(amount, currencySymbol)}</Badge>
+      {action}
+    </div>
+  );
+}
+
+function PayerSettlementCard({
+  group,
+  currencySymbol,
+  currentUserId,
+  expanded,
+  onToggle,
+  onRecord,
+}: {
+  group: ReturnType<typeof groupByPayer<SettlementItem>>[0];
+  currencySymbol: string;
+  currentUserId: string;
+  expanded: boolean;
+  onToggle: () => void;
+  onRecord: (item: SettlementItem) => void;
+}) {
+  const payerName = group.fromUser.name;
+  const explanation = group.items[0]?.explanation;
+  const splits = [...group.items].sort((a, b) => b.amount - a.amount);
+
   return (
     <Card>
       <CardContent className="py-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs">{getInitials(fromName)}</AvatarFallback>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex w-full items-center gap-3 text-left"
+        >
+          <Avatar className="h-10 w-10 shrink-0">
+            <AvatarFallback className="text-xs font-bold">
+              {getInitials(payerName)}
+            </AvatarFallback>
           </Avatar>
-          <span className="text-sm font-medium">{fromName}</span>
-          <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs">{getInitials(toName)}</AvatarFallback>
-          </Avatar>
-          <span className="text-sm font-medium flex-1 min-w-16">{toName}</span>
-          <Badge variant="default">{formatCents(amount, currencySymbol)}</Badge>
-          {action}
-        </div>
-        {explanation && payerName && (
-          <SettlementExplanation
-            lines={explanation.lines}
-            summary={explanation.summary}
-            payerName={payerName}
-            defaultOpen={explanationOpen}
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold truncate">{payerName}</p>
+            <p className="text-sm text-muted-foreground">
+              needs to pay {formatCents(group.totalAmount, currencySymbol)}
+              {splits.length > 1 && (
+                <span className="text-muted-foreground/80">
+                  {" "}
+                  · {splits.length} people
+                </span>
+              )}
+            </p>
+          </div>
+          <Badge variant="default" className="shrink-0">
+            {formatCents(group.totalAmount, currencySymbol)}
+          </Badge>
+          <ChevronDown
+            className={cn(
+              "h-5 w-5 shrink-0 text-muted-foreground transition-transform",
+              expanded && "rotate-180",
+            )}
           />
+        </button>
+
+        {expanded && (
+          <div className="mt-4 space-y-4 border-t border-border/60 pt-4">
+            {explanation && (
+              <SettlementExplanation
+                lines={explanation.lines}
+                summary={`${payerName} pays ${formatCents(group.totalAmount, currencySymbol)} total across ${splits.length} ${splits.length === 1 ? "person" : "people"} to settle the group.`}
+                payerName={payerName}
+                defaultOpen={group.fromUserId === currentUserId}
+              />
+            )}
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
+                Payment split
+              </p>
+              {splits.map((s) => {
+                const canRecord =
+                  s.fromUserId === currentUserId || s.toUserId === currentUserId;
+                return (
+                  <PaymentSplitRow
+                    key={`${s.fromUserId}-${s.toUserId}`}
+                    toName={s.toUser.name}
+                    amount={s.amount}
+                    currencySymbol={currencySymbol}
+                    action={
+                      canRecord ? (
+                        <Button size="sm" variant="outline" onClick={() => onRecord(s)}>
+                          <CheckCircle className="h-4 w-4" />
+                          Record
+                        </Button>
+                      ) : undefined
+                    }
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PayerDebtCard({
+  group,
+  currencySymbol,
+  expanded,
+  onToggle,
+}: {
+  group: ReturnType<typeof groupByPayer<DebtItem>>[0];
+  currencySymbol: string;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const payerName = group.fromUser.name;
+  const splits = [...group.items].sort((a, b) => b.amount - a.amount);
+
+  return (
+    <Card>
+      <CardContent className="py-4">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex w-full items-center gap-3 text-left"
+        >
+          <Avatar className="h-10 w-10 shrink-0">
+            <AvatarFallback className="text-xs font-bold">
+              {getInitials(payerName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold truncate">{payerName}</p>
+            <p className="text-sm text-muted-foreground">
+              owes {formatCents(group.totalAmount, currencySymbol)}
+              {splits.length > 1 && (
+                <span className="text-muted-foreground/80">
+                  {" "}
+                  · {splits.length} people
+                </span>
+              )}
+            </p>
+          </div>
+          <Badge variant="default" className="shrink-0">
+            {formatCents(group.totalAmount, currencySymbol)}
+          </Badge>
+          <ChevronDown
+            className={cn(
+              "h-5 w-5 shrink-0 text-muted-foreground transition-transform",
+              expanded && "rotate-180",
+            )}
+          />
+        </button>
+
+        {expanded && (
+          <div className="mt-4 space-y-2 border-t border-border/60 pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
+              Owes to
+            </p>
+            {splits.map((debt) => (
+              <PaymentSplitRow
+                key={`${debt.fromUserId}-${debt.toUserId}`}
+                toName={debt.toUser.name}
+                amount={debt.amount}
+                currencySymbol={currencySymbol}
+              />
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
@@ -93,6 +266,7 @@ export function SettleUpTab({
   const { currencySymbol } = useGroupCurrency();
   const recordPayment = useRecordPayment(groupId);
   const [simplifyDebts, setSimplifyDebts] = useState(true);
+  const [expandedPayerId, setExpandedPayerId] = useState<string | null>(null);
   const [recording, setRecording] = useState<{
     fromUserId: string;
     toUserId: string;
@@ -106,12 +280,32 @@ export function SettleUpTab({
 
   const { rawDebtCount, transactionCount, paymentsSaved } = settlements;
   const showSimplified = simplifyDebts && settlements.settlements.length > 0;
-  const displayDebts = showSimplified ? null : balances.debts;
   const isEmpty = showSimplified
     ? settlements.settlements.length === 0
     : balances.debts.length === 0;
 
-  function openRecord(s: SettlementResponse["settlements"][0]) {
+  const groupedSettlements = useMemo(
+    () => groupByPayer(settlements.settlements),
+    [settlements.settlements],
+  );
+
+  const groupedDebts = useMemo(() => groupByPayer(balances.debts), [balances.debts]);
+
+  const defaultExpandedPayer = useMemo(() => {
+    const payerGroups = showSimplified ? groupedSettlements : groupedDebts;
+    const mine = payerGroups.find((g) => g.fromUserId === currentUserId);
+    return mine?.fromUserId ?? payerGroups[0]?.fromUserId ?? null;
+  }, [showSimplified, groupedSettlements, groupedDebts, currentUserId]);
+
+  const [hasToggledExpand, setHasToggledExpand] = useState(false);
+  const activeExpandedId = hasToggledExpand ? expandedPayerId : defaultExpandedPayer;
+
+  function togglePayer(payerId: string) {
+    setHasToggledExpand(true);
+    setExpandedPayerId((current) => (current === payerId ? null : payerId));
+  }
+
+  function openRecord(s: SettlementItem) {
     setRecording({
       fromUserId: s.fromUserId,
       toUserId: s.toUserId,
@@ -165,13 +359,17 @@ export function SettleUpTab({
                 </div>
                 <p className="text-sm text-muted-foreground max-w-lg">
                   Combine everyone&apos;s balances into the fewest payments. Great for large groups
-                  — e.g. 10 people with many expenses may only need a handful of transfers.
+                  - e.g. 10 people with many expenses may only need a handful of transfers.
                 </p>
               </div>
               <div className="flex rounded-full border border-border p-1 bg-muted/40 shrink-0">
                 <button
                   type="button"
-                  onClick={() => setSimplifyDebts(true)}
+                  onClick={() => {
+                    setSimplifyDebts(true);
+                    setHasToggledExpand(false);
+                    setExpandedPayerId(null);
+                  }}
                   className={cn(
                     "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
                     simplifyDebts
@@ -183,7 +381,11 @@ export function SettleUpTab({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSimplifyDebts(false)}
+                  onClick={() => {
+                    setSimplifyDebts(false);
+                    setHasToggledExpand(false);
+                    setExpandedPayerId(null);
+                  }}
                   className={cn(
                     "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
                     !simplifyDebts
@@ -208,7 +410,9 @@ export function SettleUpTab({
                 </div>
                 {paymentsSaved > 0 && (
                   <div className="rounded-2xl bg-success-muted px-3 py-2 text-success-foreground">
-                    <span className="font-semibold">Save {paymentsSaved} transaction{paymentsSaved === 1 ? "" : "s"}</span>
+                    <span className="font-semibold">
+                      Save {paymentsSaved} transaction{paymentsSaved === 1 ? "" : "s"}
+                    </span>
                   </div>
                 )}
               </div>
@@ -225,47 +429,32 @@ export function SettleUpTab({
         ) : showSimplified ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Recommended payments to settle the group with the minimum number of transfers.
+              Tap a person to see who they pay and record payments.
             </p>
-            {settlements.settlements.map((s) => {
-              const canRecord =
-                s.fromUserId === currentUserId || s.toUserId === currentUserId;
-              return (
-                <DebtRow
-                  key={`${s.fromUserId}-${s.toUserId}`}
-                  fromName={s.fromUser.name}
-                  toName={s.toUser.name}
-                  amount={s.amount}
-                  currencySymbol={currencySymbol}
-                  payerName={s.fromUser.name}
-                  explanation={s.explanation}
-                  explanationOpen={s.fromUserId === currentUserId}
-                  action={
-                    canRecord ? (
-                      <Button size="sm" variant="outline" onClick={() => openRecord(s)}>
-                        <CheckCircle className="h-4 w-4" />
-                        Record
-                      </Button>
-                    ) : undefined
-                  }
-                />
-              );
-            })}
+            {groupedSettlements.map((group) => (
+              <PayerSettlementCard
+                key={group.fromUserId}
+                group={group}
+                currencySymbol={currencySymbol}
+                currentUserId={currentUserId}
+                expanded={activeExpandedId === group.fromUserId}
+                onToggle={() => togglePayer(group.fromUserId)}
+                onRecord={openRecord}
+              />
+            ))}
           </div>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Every individual debt between members ({balances.debts.length} payment
-              {balances.debts.length === 1 ? "" : "s"}). Toggle &quot;Simplified&quot; above to
-              reduce this.
+              Every individual debt between members, grouped by who owes. Tap to see the split.
             </p>
-            {displayDebts?.map((debt) => (
-              <DebtRow
-                key={`${debt.fromUserId}-${debt.toUserId}`}
-                fromName={debt.fromUser.name}
-                toName={debt.toUser.name}
-                amount={debt.amount}
+            {groupedDebts.map((group) => (
+              <PayerDebtCard
+                key={group.fromUserId}
+                group={group}
                 currencySymbol={currencySymbol}
+                expanded={activeExpandedId === group.fromUserId}
+                onToggle={() => togglePayer(group.fromUserId)}
               />
             ))}
           </div>

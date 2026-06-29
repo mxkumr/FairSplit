@@ -44,7 +44,13 @@ export function buildUserBalanceExplanation(
   expenses: ExpenseInput[],
   payments: PaymentInput[],
   currencySymbol = "$",
+  options?: { subjectName?: string },
 ): { lines: BalanceExplanationLine[]; netBalance: number } {
+  const subject = options?.subjectName?.trim() || "You";
+  const useThirdPerson = Boolean(options?.subjectName?.trim());
+  const youLabel = useThirdPerson ? subject : "You";
+  const youObject = useThirdPerson ? subject : "you";
+
   const lines: BalanceExplanationLine[] = [];
 
   for (const expense of expenses) {
@@ -63,20 +69,7 @@ export function buildUserBalanceExplanation(
           counterparty: split.user,
           amount: split.amountOwed,
           netEffect: split.amountOwed,
-          text: `You paid for ${split.user.name} — ${label} (${formatCents(split.amountOwed, currencySymbol)})`,
-          sortDate: date,
-        });
-      }
-
-      const ownSplit = expense.splits.find((s) => s.userId === userId);
-      if (ownSplit && ownSplit.amountOwed > 0) {
-        lines.push({
-          kind: "borrowed",
-          expenseId: expense.id,
-          counterparty: expense.paidBy,
-          amount: ownSplit.amountOwed,
-          netEffect: -ownSplit.amountOwed,
-          text: `Your share of ${label} (${formatCents(ownSplit.amountOwed, currencySymbol)})`,
+          text: `${youLabel} paid for ${split.user.name} - ${label} (${formatCents(split.amountOwed, currencySymbol)})`,
           sortDate: date,
         });
       }
@@ -89,7 +82,7 @@ export function buildUserBalanceExplanation(
           counterparty: expense.paidBy,
           amount: split.amountOwed,
           netEffect: -split.amountOwed,
-          text: `${expense.paidBy.name} paid for you — ${label} (${formatCents(split.amountOwed, currencySymbol)})`,
+          text: `${expense.paidBy.name} paid for ${youObject} - ${label} (${formatCents(split.amountOwed, currencySymbol)})`,
           sortDate: date,
         });
       }
@@ -110,7 +103,7 @@ export function buildUserBalanceExplanation(
         counterparty: payment.toUser,
         amount: payment.amount,
         netEffect: payment.amount,
-        text: `You paid ${payment.toUser.name} ${formatCents(payment.amount, currencySymbol)}${note ? ` — ${note}` : ""}`,
+        text: `${youLabel} paid ${payment.toUser.name} ${formatCents(payment.amount, currencySymbol)}${note ? ` - ${note}` : ""}`,
         sortDate: date,
       });
     }
@@ -122,7 +115,7 @@ export function buildUserBalanceExplanation(
         counterparty: payment.fromUser,
         amount: payment.amount,
         netEffect: -payment.amount,
-        text: `${payment.fromUser.name} paid you ${formatCents(payment.amount, currencySymbol)}${note ? ` — ${note}` : ""}`,
+        text: `${payment.fromUser.name} paid ${youObject} ${formatCents(payment.amount, currencySymbol)}${note ? ` - ${note}` : ""}`,
         sortDate: date,
       });
     }
@@ -140,17 +133,40 @@ export function buildSettlementExplanation(params: {
   toUser: UserSummary;
   amount: number;
   lines: BalanceExplanationLine[];
+  /** Authoritative net from computeGroupBalances (positive = owed money, negative = owes) */
   netBalance: number;
+  directDebtAmount?: number;
   currencySymbol?: string;
 }): { lines: BalanceExplanationLine[]; summary: string } {
-  const { fromUser, toUser, amount, lines, netBalance, currencySymbol = "$" } = params;
+  const {
+    fromUser,
+    toUser,
+    amount,
+    lines,
+    netBalance,
+    directDebtAmount = 0,
+    currencySymbol = "$",
+  } = params;
 
-  const summary =
-    netBalance < 0
-      ? `After adding everything up, ${fromUser.name} owes ${formatCents(Math.abs(netBalance), currencySymbol)} overall — so ${fromUser.name} should pay ${toUser.name} ${formatCents(amount, currencySymbol)} to settle up.`
-      : netBalance > 0
-        ? `${fromUser.name} is owed ${formatCents(netBalance, currencySymbol)} overall. This ${formatCents(amount, currencySymbol)} payment to ${toUser.name} is part of settling the group.`
-        : `${fromUser.name} is all settled — this payment clears the remaining balance with ${toUser.name}.`;
+  const absNet = Math.abs(netBalance);
+  const owes = netBalance < 0;
+
+  let summary: string;
+
+  if (owes && amount === absNet) {
+    summary = `${fromUser.name} owes ${formatCents(absNet, currencySymbol)} in this group - pay ${toUser.name} ${formatCents(amount, currencySymbol)} to settle up.`;
+  } else if (owes && amount < absNet) {
+    summary = `${fromUser.name}'s net balance in this group is ${formatCents(absNet, currencySymbol)} (see breakdown below). After simplifying debts across all members, ${fromUser.name} pays ${toUser.name} ${formatCents(amount, currencySymbol)} in one transaction.`;
+    if (directDebtAmount > 0 && directDebtAmount !== amount) {
+      summary += ` Direct share owed to ${toUser.name} before simplification: ${formatCents(directDebtAmount, currencySymbol)}.`;
+    }
+  } else if (owes) {
+    summary = `${fromUser.name} owes ${formatCents(absNet, currencySymbol)} in this group. This ${formatCents(amount, currencySymbol)} payment to ${toUser.name} is part of settling up.`;
+  } else if (netBalance > 0) {
+    summary = `${fromUser.name} is owed ${formatCents(netBalance, currencySymbol)} overall. This ${formatCents(amount, currencySymbol)} payment to ${toUser.name} is part of settling the group.`;
+  } else {
+    summary = `${fromUser.name} is all settled - this payment clears the remaining balance with ${toUser.name}.`;
+  }
 
   return { lines, summary };
 }

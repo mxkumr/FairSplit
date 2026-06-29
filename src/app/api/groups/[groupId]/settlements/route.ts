@@ -5,7 +5,7 @@ import {
   buildUserBalanceExplanation,
 } from "@/lib/balance-explanation";
 import { computeGroupBalances } from "@/lib/balances";
-import { simplifyDebts } from "@/lib/debt-simplification";
+import { simplifyDebtsPreferDirect } from "@/lib/debt-simplification";
 import { handleApiError } from "@/lib/api-helpers";
 import { assertGroupMember, getGroupBalanceData } from "@/lib/groups";
 import { prisma } from "@/lib/prisma";
@@ -26,8 +26,13 @@ export async function GET(_request: Request, context: RouteContext) {
     const currencySymbol = group?.currencySymbol ?? "$";
 
     const { debts, netBalances } = computeGroupBalances(expenses, payments);
-    const rawSettlements = simplifyDebts(
+    const rawSettlements = simplifyDebtsPreferDirect(
       netBalances.map((b) => ({ userId: b.userId, amount: b.amount })),
+      debts.map((d) => ({
+        fromUserId: d.fromUserId,
+        toUserId: d.toUserId,
+        amount: d.amount,
+      })),
     );
 
     const userMap = new Map(netBalances.map((b) => [b.userId, b.user]));
@@ -40,7 +45,14 @@ export async function GET(_request: Request, context: RouteContext) {
     function getExplanation(userId: string) {
       let cached = explanationCache.get(userId);
       if (!cached) {
-        cached = buildUserBalanceExplanation(userId, expenses, payments, currencySymbol);
+        const user = userMap.get(userId);
+        cached = buildUserBalanceExplanation(
+          userId,
+          expenses,
+          payments,
+          currencySymbol,
+          { subjectName: user?.name },
+        );
         explanationCache.set(userId, cached);
       }
       return cached;
@@ -53,13 +65,21 @@ export async function GET(_request: Request, context: RouteContext) {
         throw new Error("Missing user in settlement");
       }
 
+      const payerNet =
+        netBalances.find((b) => b.userId === s.fromUserId)?.amount ?? 0;
+      const directDebt =
+        debts.find(
+          (d) => d.fromUserId === s.fromUserId && d.toUserId === s.toUserId,
+        )?.amount ?? 0;
+
       const payerExplanation = getExplanation(s.fromUserId);
       const { lines, summary } = buildSettlementExplanation({
         fromUser,
         toUser,
         amount: s.amount,
         lines: payerExplanation.lines,
-        netBalance: payerExplanation.netBalance,
+        netBalance: payerNet,
+        directDebtAmount: directDebt,
         currencySymbol,
       });
 

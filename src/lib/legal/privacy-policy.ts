@@ -126,7 +126,7 @@ export const PRIVACY_POLICY_SECTIONS: LegalSection[] = [
     title: "15. Contact",
     paragraphs: [
       "Questions about this Privacy Policy or your data:",
-      "Manish Kumar — mxkumr@gmail.com",
+      "Manish Kumar - mxkumr@gmail.com",
       "GitHub: https://github.com/mxkumr/FairSplit",
     ],
   },

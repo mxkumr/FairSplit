@@ -1,7 +1,7 @@
 {
   "name": "fairsplit",
   "version": "0.1.0",
-  "description": "Free, open-source expense sharing app — split bills with friends, simplify debts, and settle up. A modern Splitwise alternative built with Next.js and PostgreSQL.",
+  "description": "Free, open-source expense sharing app - split bills with friends, simplify debts, and settle up. A modern Splitwise alternative built with Next.js and PostgreSQL.",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -16,6 +16,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:bug-check": "tsx prisma/seed-bug-check.ts",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down"
   },

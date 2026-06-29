@@ -3,7 +3,7 @@ import { LegalDocumentPage } from "@/components/legal/LegalDocumentPage";
 import { TERMS_OF_SERVICE_SECTIONS } from "@/lib/legal/terms-of-service";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — FairSplit",
+  title: "Terms of Service - FairSplit",
   description: "Terms governing your use of FairSplit.",
 };
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { simplifyDebts } from "../debt-simplification";
+import { simplifyDebts, simplifyDebtsPreferDirect } from "../debt-simplification";
 
 describe("simplifyDebts", () => {
   it("simplifies a 3-way equal split where payer is owed by two others", () => {
@@ -63,5 +63,19 @@ describe("simplifyDebts", () => {
         { userId: "bob", amount: 0 },
       ]),
     ).toEqual([]);
+  });
+
+  it("prefers direct creditors after a partial payment cleared one edge", () => {
+    const netBalances = [
+      { userId: "jishitha", amount: 201 },
+      { userId: "niranjan", amount: 428 },
+      { userId: "anuraag", amount: -45 },
+    ];
+    const directDebts = [{ fromUserId: "anuraag", toUserId: "niranjan", amount: 45 }];
+
+    const direct = simplifyDebtsPreferDirect(netBalances, directDebts);
+    expect(direct).toEqual([
+      { fromUserId: "anuraag", toUserId: "niranjan", amount: 45 },
+    ]);
   });
 });

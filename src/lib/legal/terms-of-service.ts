@@ -138,7 +138,7 @@ export const TERMS_OF_SERVICE_SECTIONS: LegalSection[] = [
     title: "17. Contact",
     paragraphs: [
       "Questions about these Terms:",
-      "Manish Kumar — mxkumr@gmail.com",
+      "Manish Kumar - mxkumr@gmail.com",
       "GitHub: https://github.com/mxkumr/FairSplit",
     ],
   },

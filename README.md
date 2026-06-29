@@ -2,7 +2,7 @@
 
 **Free, open-source expense sharing for friends, roommates, and travel groups.**
 
-FairSplit is a modern [Splitwise](https://www.splitwise.com)-style app for tracking shared costs, splitting bills fairly, and settling up — without paywalls or premium-only features. Built with Next.js, TypeScript, and PostgreSQL.
+FairSplit is a modern [Splitwise](https://www.splitwise.com)-style app for tracking shared costs, splitting bills fairly, and settling up - without paywalls or premium-only features. Built with Next.js, TypeScript, and PostgreSQL.
 
 **Live demo:** [fairsplit.thecrudstudio.com](https://fairsplit.thecrudstudio.com)
 
@@ -10,19 +10,19 @@ FairSplit is a modern [Splitwise](https://www.splitwise.com)-style app for track
 
 ## Features
 
-- **Groups & expenses** — Create groups, add expenses, and split evenly, by shares, by percentage, or by custom amounts
-- **Dashboard** — See what you owe and what you're owed across all groups at a glance
-- **Debt simplification** — Reduce the number of payments needed to settle everyone up
-- **Settlement explanations** — Plain-language breakdowns of who paid for what and why you owe someone
-- **Settle up** — Record payments between members and track balances over time
-- **Friends** — Add friends by email or shareable invite link
-- **Group invites** — Share a link so others can join a group without hunting for usernames
-- **Recurring expenses** — Daily, weekly, or monthly expense templates
-- **Multi-currency** — Per-group currency support
-- **Receipt uploads** — Attach images or PDFs to expenses (local dev; see [Receipt storage](#receipt-storage))
-- **Email verification** — OTP codes via [Resend](https://resend.com)
-- **Dark mode** — System-aware light/dark theme
-- **Mobile-first UI** — Responsive layout with a center FAB for quick actions
+- **Groups & expenses** - Create groups, add expenses, and split evenly, by shares, by percentage, or by custom amounts
+- **Dashboard** - See what you owe and what you're owed across all groups at a glance
+- **Debt simplification** - Reduce the number of payments needed to settle everyone up
+- **Settlement explanations** - Plain-language breakdowns of who paid for what and why you owe someone
+- **Settle up** - Record payments between members and track balances over time
+- **Friends** - Add friends by email or shareable invite link
+- **Group invites** - Share a link so others can join a group without hunting for usernames
+- **Recurring expenses** - Daily, weekly, or monthly expense templates
+- **Multi-currency** - Per-group currency support
+- **Receipt uploads** - Attach images or PDFs to expenses (local dev; see [Receipt storage](#receipt-storage))
+- **Email verification** - OTP codes via [Resend](https://resend.com)
+- **Dark mode** - System-aware light/dark theme
+- **Mobile-first UI** - Responsive layout with a center FAB for quick actions
 
 ---
 
@@ -77,7 +77,7 @@ cp .env.example .env
 
 ### 3. Database
 
-**Option A — Docker (recommended for local dev)**
+**Option A - Docker (recommended for local dev)**
 
 ```bash
 npm run db:up
@@ -85,7 +85,7 @@ npm run db:migrate
 npm run db:seed   # optional demo users
 ```
 
-**Option B — Existing Postgres**
+**Option B - Existing Postgres**
 
 Set `DATABASE_URL` and `DIRECT_URL`, then:
 

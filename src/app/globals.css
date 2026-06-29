@@ -2,7 +2,7 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Do NOT use `inline` — it bakes colors into utilities and breaks dark-mode variable overrides */
+/* Do NOT use `inline` - it bakes colors into utilities and breaks dark-mode variable overrides */
 @theme {
   --color-background: oklch(0.985 0.002 260);
   --color-foreground: oklch(0.13 0 0);
@@ -10,7 +10,7 @@
   --color-card-foreground: oklch(0.13 0 0);
   --color-popover: oklch(1 0 0);
   --color-popover-foreground: oklch(0.13 0 0);
-  /* Logo coral — matches icon.svg gradient end (#FF4B5C) */
+  /* Logo coral - matches icon.svg gradient end (#FF4B5C) */
   --color-primary: oklch(0.63 0.22 15);
   --color-primary-foreground: oklch(0.99 0 0);
   --color-secondary: oklch(0.96 0.04 15);
