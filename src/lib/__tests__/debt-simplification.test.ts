@@ -145,7 +145,7 @@ describe("simplifyDebtsPreferDirect", () => {
   });
 });
 
-describe("waiveSubThresholdBalances", () => {
+describe.skip("waiveSubThresholdBalances (disabled — set MIN_SETTLEMENT_CENTS > 0 to enable)", () => {
   it("folds tiny creditor balance into debtor so one payment remains", () => {
     const nets = [
       { userId: "sanju", amount: 5093 },

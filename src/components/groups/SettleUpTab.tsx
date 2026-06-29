@@ -432,13 +432,6 @@ export function SettleUpTab({
                   <p className="text-xs text-muted-foreground">
                     Turn this on after you have added all expenses to the group.
                   </p>
-                  {settlements.minSettlementCents ? (
-                    <p className="text-xs text-muted-foreground">
-                      Balances under{" "}
-                      {formatCents(settlements.minSettlementCents, currencySymbol)} are treated as
-                      settled (rounding).
-                    </p>
-                  ) : null}
                   <p className="text-xs text-muted-foreground">
                     Who you pay stays fixed until someone adds or edits an expense in this group.
                   </p>

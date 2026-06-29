@@ -20,12 +20,31 @@ export type SettlementModeKey = "simplified" | "direct";
 /** Tolerance for cent rounding when validating settlement totals. */
 export const SETTLEMENT_TOLERANCE_CENTS = 1;
 
-/** Skip suggested payments below this amount (e.g. €0.10) to avoid awkward micro-transfers. */
-export const MIN_SETTLEMENT_CENTS = 10;
+/**
+ * Tiny-balance threshold (disabled).
+ * Set to e.g. 10 to fold sub-threshold nets into larger balances before building
+ * settlement suggestions. Locked settlement plans are the primary UX fix instead.
+ */
+// export const MIN_SETTLEMENT_CENTS = 10;
+export const MIN_SETTLEMENT_CENTS = 0;
 
 /**
+ * Display-only: show member balances below this as "settled up" (does not change totals).
+ * Hides confusing €0.08-style rounding on the group page. Independent of MIN_SETTLEMENT_CENTS.
+ */
+export const MIN_BALANCE_DISPLAY_CENTS = 10;
+
+export function isNegligibleDisplayBalance(amount: number): boolean {
+  return (
+    MIN_BALANCE_DISPLAY_CENTS > 0 &&
+    amount !== 0 &&
+    Math.abs(amount) < MIN_BALANCE_DISPLAY_CENTS
+  );
+}
+
+/*
  * Treat tiny net balances as settled by folding them into the nearest larger
- * balance on the opposite side. Keeps group nets summing to zero.
+ * balance on the opposite side. Re-enable with MIN_SETTLEMENT_CENTS > 0.
  */
 export function waiveSubThresholdBalances(
   netBalances: NetBalance[],
@@ -65,9 +84,7 @@ export function waiveSubThresholdBalances(
   return balances.filter((balance) => balance.amount !== 0);
 }
 
-/**
- * Nets prepared for settlement suggestions (small balances waived).
- */
+/** Raw nets for settlement suggestions (waive step disabled while MIN_SETTLEMENT_CENTS is 0). */
 export function netsForSettlementSuggestions(
   netBalances: NetBalance[],
   minCents = MIN_SETTLEMENT_CENTS,

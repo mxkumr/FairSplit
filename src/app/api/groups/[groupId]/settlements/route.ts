@@ -6,7 +6,6 @@ import {
 } from "@/lib/balance-explanation";
 import { computeGroupBalances } from "@/lib/balances";
 import {
-  MIN_SETTLEMENT_CENTS,
   netsForSettlementSuggestions,
   type Settlement,
   type SettlementModeKey,
@@ -219,7 +218,6 @@ export async function GET(_request: Request, context: RouteContext) {
       transactionCount: active.transactionCount,
       rawDebtCount,
       paymentsSaved: active.paymentsSaved,
-      minSettlementCents: MIN_SETTLEMENT_CENTS,
       settlementPlanLocked: true,
       modes,
     });

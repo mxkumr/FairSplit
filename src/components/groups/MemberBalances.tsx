@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCents } from "@/lib/money";
+import { isNegligibleDisplayBalance } from "@/lib/debt-simplification";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import type { BalanceResponse } from "@/lib/api-client";
 
@@ -36,6 +37,8 @@ export function MemberBalances({
     <div className="grid gap-3 sm:grid-cols-2">
       {balances.netBalances.map((entry) => {
         const isYou = entry.userId === currentUserId;
+        const negligible = isNegligibleDisplayBalance(entry.amount);
+        const displayAmount = negligible ? 0 : entry.amount;
         return (
           <Card key={entry.userId}>
             <CardContent className="flex items-center gap-3 py-4">
@@ -48,16 +51,16 @@ export function MemberBalances({
                   {isYou && <span className="text-muted-foreground"> (you)</span>}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {entry.amount > 0
+                  {displayAmount > 0
                     ? "gets back"
-                    : entry.amount < 0
+                    : displayAmount < 0
                       ? "owes"
                       : "settled up"}
                 </p>
               </div>
-              {entry.amount !== 0 && (
-                <Badge variant={entry.amount > 0 ? "success" : "warning"}>
-                  {formatCents(Math.abs(entry.amount), currencySymbol)}
+              {displayAmount !== 0 && (
+                <Badge variant={displayAmount > 0 ? "success" : "warning"}>
+                  {formatCents(Math.abs(displayAmount), currencySymbol)}
                 </Badge>
               )}
             </CardContent>
