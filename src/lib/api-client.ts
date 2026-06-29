@@ -78,6 +78,12 @@ export type PaymentItem = {
   toUser: AuthUser;
 };
 
+export type GroupMember = {
+  isFavorite?: boolean;
+  joinedAt: string;
+  user: AuthUser;
+};
+
 export type GroupDetail = {
   id: string;
   name: string;
@@ -86,7 +92,7 @@ export type GroupDetail = {
   currencySymbol: string;
   isFavorite: boolean;
   createdAt: string;
-  members: { isFavorite?: boolean; user: AuthUser }[];
+  members: GroupMember[];
   expenses: ExpenseItem[];
   payments: PaymentItem[];
 };

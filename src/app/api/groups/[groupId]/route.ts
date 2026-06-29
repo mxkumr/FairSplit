@@ -23,6 +23,7 @@ export async function GET(_request: Request, context: RouteContext) {
       include: {
         members: {
           include: { user: { select: { id: true, name: true, email: true } } },
+          orderBy: { joinedAt: "desc" },
         },
         expenses: {
           include: expenseInclude,
@@ -46,13 +47,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
     return NextResponse.json({
       group: {
-        ...serializeGroup({
-          ...group,
-          members: group.members.map((m) => ({
-            isFavorite: m.isFavorite,
-            user: m.user,
-          })),
-        }),
+        ...serializeGroup(group),
         isFavorite: membership?.isFavorite ?? false,
       },
     });

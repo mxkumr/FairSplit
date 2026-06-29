@@ -49,7 +49,11 @@ export function serializeGroup(group: {
   currency: string;
   currencySymbol: string;
   createdAt: Date;
-  members: { isFavorite?: boolean; user: { id: string; name: string; email: string } }[];
+  members: {
+    isFavorite?: boolean;
+    joinedAt: Date;
+    user: { id: string; name: string; email: string };
+  }[];
   expenses: Parameters<typeof serializeExpense>[0][];
   payments: {
     id: string;
@@ -69,6 +73,7 @@ export function serializeGroup(group: {
     createdAt: group.createdAt.toISOString(),
     members: group.members.map((m) => ({
       isFavorite: m.isFavorite ?? false,
+      joinedAt: m.joinedAt.toISOString(),
       user: m.user,
     })),
     expenses: group.expenses.map(serializeExpense),

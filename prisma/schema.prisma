@@ -112,9 +112,10 @@ model Group {
 }
 
 model GroupMember {
-  groupId    String  @map("group_id")
-  userId     String  @map("user_id")
-  isFavorite Boolean @default(false) @map("is_favorite")
+  groupId    String   @map("group_id")
+  userId     String   @map("user_id")
+  isFavorite Boolean  @default(false) @map("is_favorite")
+  joinedAt   DateTime @default(now()) @map("joined_at")
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)

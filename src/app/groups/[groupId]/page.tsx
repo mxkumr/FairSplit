@@ -10,6 +10,7 @@ import { AddMemberModal } from "@/components/groups/AddMemberModal";
 import { ShareGroupInviteButton } from "@/components/groups/ShareGroupInviteButton";
 import { GroupActivityLog } from "@/components/groups/GroupActivityLog";
 import { GroupCurrencyProvider, useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
+import { GroupMemberPreview } from "@/components/groups/GroupMemberPreview";
 import { GroupQuickActions } from "@/components/groups/GroupQuickActions";
 import { GroupSettings } from "@/components/groups/GroupSettings";
 import { MemberBalances } from "@/components/groups/MemberBalances";
@@ -25,18 +26,21 @@ import {
   useSettlements,
   useToggleFavorite,
 } from "@/hooks/use-api";
+import type { GroupMember } from "@/lib/api-client";
 import { getGroupCoverClass } from "@/lib/group-cover";
 import { cn } from "@/lib/utils";
 
 function GroupHero({
   group,
   members,
+  groupMembers,
   membersCount,
   onToggleFavorite,
   isFavorite,
 }: {
   group: NonNullable<ReturnType<typeof useGroup>["data"]>["group"];
   members: { id: string }[];
+  groupMembers: GroupMember[];
   membersCount: number;
   onToggleFavorite: () => void;
   isFavorite: boolean;
@@ -82,6 +86,7 @@ function GroupHero({
           Group Details
         </p>
         <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{group.name}</h1>
+        <GroupMemberPreview members={groupMembers} groupName={group.name} />
         {group.information && (
           <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
             {group.information}
@@ -196,7 +201,8 @@ function GroupPageContent({ params }: { params: Promise<{ groupId: string }> }) 
   const toggleFavorite = useToggleFavorite(groupId);
 
   const group = groupData?.group;
-  const members = group?.members.map((m) => m.user) ?? [];
+  const groupMembers = group?.members ?? [];
+  const members = groupMembers.map((m) => m.user);
 
   async function handleDeleteExpense(expenseId: string) {
     if (!confirm("Delete this expense?")) return;
@@ -214,6 +220,7 @@ function GroupPageContent({ params }: { params: Promise<{ groupId: string }> }) 
               <GroupHero
                 group={group}
                 members={members}
+                groupMembers={groupMembers}
                 membersCount={members.length}
                 onToggleFavorite={() => toggleFavorite.mutate()}
                 isFavorite={group.isFavorite}
