@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { EditExpenseModal } from "@/components/expenses/EditExpenseModal";
+import { EditPaymentDialog } from "@/components/payments/EditPaymentDialog";
 import { formatCents } from "@/lib/money";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
+import { useDeletePayment } from "@/hooks/use-api";
 import type { AuthUser, ExpenseItem, PaymentItem } from "@/lib/api-client";
 
 function getInitials(name: string) {
@@ -41,7 +43,24 @@ export function ActivityFeed({
   onDeleteExpense: (expenseId: string) => void;
 }) {
   const { currencySymbol } = useGroupCurrency();
+  const deletePayment = useDeletePayment(groupId);
   const [search, setSearch] = useState("");
+  const [editingPayment, setEditingPayment] = useState<PaymentItem | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  async function handleDeletePayment(paymentId: string) {
+    if (!confirm("Delete this payment? Balances will be updated.")) return;
+    try {
+      await deletePayment.mutateAsync(paymentId);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete payment");
+    }
+  }
+
+  function handleEditPayment(payment: PaymentItem) {
+    setEditingPayment(payment);
+    setEditDialogOpen(true);
+  }
 
   const items: ActivityItem[] = [
     ...expenses.map((e) => ({
@@ -112,7 +131,27 @@ export function ActivityFeed({
                           <p className="text-xs text-success/80 mt-1">{p.note}</p>
                         )}
                       </div>
-                      <Badge variant="success">{formatCents(p.amount, currencySymbol)}</Badge>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Badge variant="success">{formatCents(p.amount, currencySymbol)}</Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label="Edit payment"
+                          onClick={() => handleEditPayment(p)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          aria-label="Delete payment"
+                          onClick={() => handleDeletePayment(p.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                     <p className="mt-1 text-xs text-success/80">
                       {new Date(item.date).toLocaleDateString()}
@@ -211,6 +250,21 @@ export function ActivityFeed({
           );
         })
       )}
+
+      <EditPaymentDialog
+        groupId={groupId}
+        payment={editingPayment}
+        expenses={expenses}
+        payments={payments}
+        currencySymbol={currencySymbol}
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) {
+            setEditingPayment(null);
+          }
+        }}
+      />
     </div>
   );
 }

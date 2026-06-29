@@ -377,6 +377,22 @@ export const api = {
       body: JSON.stringify(body),
     }).then(handleResponse<{ payment: PaymentItem }>),
 
+  updatePayment: (
+    groupId: string,
+    paymentId: string,
+    body: { amount?: number; note?: string | null },
+  ) =>
+    fetch(`/api/groups/${groupId}/payments/${paymentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(handleResponse<{ payment: PaymentItem }>),
+
+  deletePayment: (groupId: string, paymentId: string) =>
+    fetch(`/api/groups/${groupId}/payments/${paymentId}`, { method: "DELETE" }).then(
+      handleResponse<{ success: boolean }>,
+    ),
+
   getBalances: () => fetch("/api/balances").then(handleResponse<DashboardBalances>),
 
   getGroupBalances: (groupId: string) =>

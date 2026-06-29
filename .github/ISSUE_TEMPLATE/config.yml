@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions or ideas
+    url: https://github.com/mxkumr/FairSplit/issues/new?template=feedback.yml
+    about: Share feedback or suggest a feature (GitHub account required)

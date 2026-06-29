@@ -32,6 +32,15 @@ export const recordPaymentSchema = z.object({
   note: z.string().max(200).optional(),
 });
 
+export const updatePaymentSchema = z
+  .object({
+    amount: z.number().int().positive("Amount must be a positive integer (cents)").optional(),
+    note: z.string().max(200).optional().nullable(),
+  })
+  .refine((data) => data.amount !== undefined || data.note !== undefined, {
+    message: "Provide an amount or note to update",
+  });
+
 export type CreateGroupInput = z.infer<typeof createGroupSchema>;
 export type AddMemberInput = z.infer<typeof addMemberSchema>;
 export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>;

@@ -171,13 +171,15 @@ function GroupTabs({
       <TabsContent value="settle">
         {settlementsLoading || balancesLoading ? (
           <p className="text-muted-foreground">Loading settlements...</p>
-        ) : settlements && balances && me?.user ? (
+        ) : settlements && balances && me?.user && group ? (
           <SettleUpTab
             groupId={groupId}
             settlements={settlements}
             balances={balances}
+            expenses={group.expenses}
+            payments={group.payments ?? []}
             currentUserId={me.user.id}
-            defaultSettlementMode={group?.settlementMode}
+            defaultSettlementMode={group.settlementMode}
           />
         ) : null}
       </TabsContent>

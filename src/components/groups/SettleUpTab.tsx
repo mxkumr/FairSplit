@@ -16,12 +16,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SettlementExplanation } from "@/components/groups/SettlementExplanation";
+import { EditPaymentDialog } from "@/components/payments/EditPaymentDialog";
+import { PaymentMethodFields } from "@/components/payments/PaymentMethodFields";
 import { buildPayerSettlementSummary } from "@/lib/balance-explanation";
-import { useRecordPayment } from "@/hooks/use-api";
+import { buildPaymentNote, DEFAULT_PAYMENT_METHOD, type PaymentMethod } from "@/lib/payment-methods";
+import { useDeletePayment, useRecordPayment } from "@/hooks/use-api";
 import { formatCents, parseDollarsToCents } from "@/lib/money";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import { cn } from "@/lib/utils";
-import type { AuthUser, BalanceResponse, SettlementItem, SettlementModeKey, SettlementResponse } from "@/lib/api-client";
+import type { AuthUser, BalanceResponse, ExpenseItem, PaymentItem, SettlementItem, SettlementModeKey, SettlementResponse } from "@/lib/api-client";
 import {
   SimplifyDebtsSwitch,
   settlementModeDescription,
@@ -96,6 +99,8 @@ function PayerSettlementCard({
   expanded,
   onToggle,
   onRecord,
+  onEditPayment,
+  onDeletePayment,
 }: {
   group: ReturnType<typeof groupByPayer<SettlementItem>>[0];
   currencySymbol: string;
@@ -103,6 +108,8 @@ function PayerSettlementCard({
   expanded: boolean;
   onToggle: () => void;
   onRecord: (item: SettlementItem) => void;
+  onEditPayment: (paymentId: string) => void;
+  onDeletePayment: (paymentId: string) => void;
 }) {
   const payerName = group.fromUser.name;
   const explanation = group.items[0]?.explanation;
@@ -157,6 +164,8 @@ function PayerSettlementCard({
                 summary={paymentSummary}
                 payerName={payerName}
                 defaultOpen={group.fromUserId === currentUserId}
+                onEditPayment={onEditPayment}
+                onDeletePayment={onDeletePayment}
               />
             )}
 
@@ -266,17 +275,22 @@ export function SettleUpTab({
   groupId,
   settlements,
   balances,
+  expenses,
+  payments,
   currentUserId,
   defaultSettlementMode,
 }: {
   groupId: string;
   settlements: SettlementResponse;
   balances: BalanceResponse;
+  expenses: ExpenseItem[];
+  payments: PaymentItem[];
   currentUserId: string;
   defaultSettlementMode?: SettlementModeKey;
 }) {
   const { currencySymbol } = useGroupCurrency();
   const recordPayment = useRecordPayment(groupId);
+  const deletePayment = useDeletePayment(groupId);
   const [simplifyEnabled, setSimplifyEnabled] = useState(
     (defaultSettlementMode ?? settlements.defaultMode ?? "simplified") === "simplified",
   );
@@ -290,8 +304,11 @@ export function SettleUpTab({
     toName: string;
   } | null>(null);
   const [amountInput, setAmountInput] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(DEFAULT_PAYMENT_METHOD);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [editingPayment, setEditingPayment] = useState<PaymentItem | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const { rawDebtCount, modes } = settlements;
   const activeMode = modes[settlementMode];
@@ -331,6 +348,7 @@ export function SettleUpTab({
       toName: s.toUser.name,
     });
     setAmountInput((s.amount / 100).toFixed(2));
+    setPaymentMethod(DEFAULT_PAYMENT_METHOD);
     setNote("");
     setError(null);
   }
@@ -355,11 +373,27 @@ export function SettleUpTab({
         fromUserId: recording.fromUserId,
         toUserId: recording.toUserId,
         amount,
-        note: note.trim() || undefined,
+        note: buildPaymentNote(paymentMethod, note),
       });
       setRecording(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to record payment");
+    }
+  }
+
+  function openEditPayment(paymentId: string) {
+    const payment = payments.find((item) => item.id === paymentId);
+    if (!payment) return;
+    setEditingPayment(payment);
+    setEditDialogOpen(true);
+  }
+
+  async function handleDeletePayment(paymentId: string) {
+    if (!confirm("Delete this payment? Balances will be updated.")) return;
+    try {
+      await deletePayment.mutateAsync(paymentId);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete payment");
     }
   }
 
@@ -438,6 +472,8 @@ export function SettleUpTab({
                 expanded={activeExpandedId === group.fromUserId}
                 onToggle={() => togglePayer(group.fromUserId)}
                 onRecord={openRecord}
+                onEditPayment={openEditPayment}
+                onDeletePayment={handleDeletePayment}
               />
             ))}
           </div>
@@ -471,15 +507,12 @@ export function SettleUpTab({
                 </p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="payment-note">Note (optional)</Label>
-              <Input
-                id="payment-note"
-                placeholder="e.g. Venmo, cash"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </div>
+            <PaymentMethodFields
+              method={paymentMethod}
+              onMethodChange={setPaymentMethod}
+              note={note}
+              onNoteChange={setNote}
+            />
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={recordPayment.isPending}>
               {recordPayment.isPending ? "Recording..." : "Record payment"}
@@ -487,6 +520,21 @@ export function SettleUpTab({
           </form>
         </DialogContent>
       </Dialog>
+
+      <EditPaymentDialog
+        groupId={groupId}
+        payment={editingPayment}
+        expenses={expenses}
+        payments={payments}
+        currencySymbol={currencySymbol}
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) {
+            setEditingPayment(null);
+          }
+        }}
+      />
     </>
   );
 }

@@ -10,6 +10,8 @@ const LABELS: Record<string, string> = {
   UPDATE_EXPENSE: "updated an expense",
   DELETE_EXPENSE: "deleted an expense",
   CREATE_PAYMENT: "recorded a payment",
+  UPDATE_PAYMENT: "updated a payment",
+  DELETE_PAYMENT: "deleted a payment",
   ADD_MEMBER: "added a member",
   REMOVE_MEMBER: "removed a member",
 };

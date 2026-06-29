@@ -6,6 +6,7 @@ import { handleApiError, jsonError } from "@/lib/api-helpers";
 import { assertGroupMember, getGroupBalanceData } from "@/lib/groups";
 import { prisma } from "@/lib/prisma";
 import { recordPaymentSchema } from "@/lib/validations/group";
+import { validatePaymentAmount } from "@/lib/payment-validation";
 
 type RouteContext = { params: Promise<{ groupId: string }> };
 
@@ -67,25 +68,14 @@ export async function POST(request: Request, context: RouteContext) {
     const { expenses, payments: existingPayments } = await getGroupBalanceData(groupId);
     const { netBalances } = computeGroupBalances(expenses, existingPayments);
 
-    const payerNet = netBalances.find((balance) => balance.userId === fromUserId)?.amount ?? 0;
-    const recipientNet =
-      netBalances.find((balance) => balance.userId === toUserId)?.amount ?? 0;
-
-    if (payerNet >= 0) {
-      return jsonError("Payer has no outstanding debt in this group", 400);
-    }
-
-    if (recipientNet <= 0) {
-      return jsonError("Recipient is not owed money in this group", 400);
-    }
-
-    const maxPayerAmount = Math.abs(payerNet);
-    if (amount > maxPayerAmount) {
-      return jsonError(`Payment exceeds payer net debt of ${maxPayerAmount} cents`, 400);
-    }
-
-    if (amount > recipientNet) {
-      return jsonError(`Payment exceeds recipient net credit of ${recipientNet} cents`, 400);
+    const validationError = validatePaymentAmount(
+      netBalances,
+      fromUserId,
+      toUserId,
+      amount,
+    );
+    if (validationError) {
+      return jsonError(validationError, 400);
     }
 
     const payment = await prisma.payment.create({

@@ -281,6 +281,42 @@ export function useRecordPayment(groupId: string) {
   });
 }
 
+export function useUpdatePayment(groupId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      paymentId,
+      body,
+    }: {
+      paymentId: string;
+      body: Parameters<typeof api.updatePayment>[2];
+    }) => api.updatePayment(groupId, paymentId, body),
+    onSuccess: async (data) => {
+      updateGroupCache(queryClient, groupId, (group) => ({
+        ...group,
+        payments: group.payments.map((payment) =>
+          payment.id === data.payment.id ? data.payment : payment,
+        ),
+      }));
+      await invalidateGroup(queryClient, groupId);
+    },
+  });
+}
+
+export function useDeletePayment(groupId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (paymentId: string) => api.deletePayment(groupId, paymentId),
+    onSuccess: async (_data, paymentId) => {
+      updateGroupCache(queryClient, groupId, (group) => ({
+        ...group,
+        payments: group.payments.filter((payment) => payment.id !== paymentId),
+      }));
+      await invalidateGroup(queryClient, groupId);
+    },
+  });
+}
+
 export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
