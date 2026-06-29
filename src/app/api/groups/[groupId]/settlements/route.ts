@@ -6,13 +6,14 @@ import {
 } from "@/lib/balance-explanation";
 import { computeGroupBalances } from "@/lib/balances";
 import {
-  simplifyDebts,
-  simplifyDebtsPreferDirect,
+  MIN_SETTLEMENT_CENTS,
+  netsForSettlementSuggestions,
   type Settlement,
   type SettlementModeKey,
 } from "@/lib/debt-simplification";
 import { handleApiError } from "@/lib/api-helpers";
 import { assertGroupMember, getGroupBalanceData } from "@/lib/groups";
+import { resolveLockedSettlementPlans } from "@/lib/settlement-plan";
 import { prisma } from "@/lib/prisma";
 import type { AuthUser } from "@/lib/api-client";
 
@@ -134,7 +135,12 @@ export async function GET(_request: Request, context: RouteContext) {
     const { expenses, payments } = await getGroupBalanceData(groupId);
     const group = await prisma.group.findUnique({
       where: { id: groupId },
-      select: { currencySymbol: true, settlementMode: true },
+      select: {
+        currencySymbol: true,
+        settlementMode: true,
+        settlementPlanFingerprint: true,
+        settlementPlan: true,
+      },
     });
     const currencySymbol = group?.currencySymbol ?? "$";
     const defaultMode = toSettlementModeKey(group?.settlementMode ?? "DIRECT");
@@ -144,6 +150,7 @@ export async function GET(_request: Request, context: RouteContext) {
       userId: balance.userId,
       amount: balance.amount,
     }));
+    const settlementNets = netsForSettlementSuggestions(nets);
     const directDebts = debts.map((debt) => ({
       fromUserId: debt.fromUserId,
       toUserId: debt.toUserId,
@@ -160,9 +167,32 @@ export async function GET(_request: Request, context: RouteContext) {
       rawDebtCount,
     };
 
+    const lockedPlans = await resolveLockedSettlementPlans({
+      groupId,
+      expenses: expenses.map((expense) => ({
+        id: expense.id,
+        amount: expense.amount,
+        paidByUserId: expense.paidByUserId,
+        expenseDate: expense.expenseDate,
+        splits: expense.splits.map((split) => ({
+          userId: split.userId,
+          amountOwed: split.amountOwed,
+        })),
+      })),
+      payments: payments.map((payment) => ({
+        fromUserId: payment.fromUserId,
+        toUserId: payment.toUserId,
+        amount: payment.amount,
+      })),
+      settlementNets,
+      directDebts,
+      storedFingerprint: group?.settlementPlanFingerprint ?? null,
+      storedPlan: group?.settlementPlan ?? null,
+    });
+
     const modes = {
       simplified: buildModeResult(
-        simplifyDebts(nets),
+        lockedPlans.simplified,
         rawDebtCount,
         shared.netBalances,
         shared.debts,
@@ -171,7 +201,7 @@ export async function GET(_request: Request, context: RouteContext) {
         shared.currencySymbol,
       ),
       direct: buildModeResult(
-        simplifyDebtsPreferDirect(nets, directDebts),
+        lockedPlans.direct,
         rawDebtCount,
         shared.netBalances,
         shared.debts,
@@ -189,6 +219,8 @@ export async function GET(_request: Request, context: RouteContext) {
       transactionCount: active.transactionCount,
       rawDebtCount,
       paymentsSaved: active.paymentsSaved,
+      minSettlementCents: MIN_SETTLEMENT_CENTS,
+      settlementPlanLocked: true,
       modes,
     });
   } catch (error) {

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { simplifyDebts, simplifyDebtsPreferDirect, validateSettlements } from "../debt-simplification";
+import {
+  simplifyDebts,
+  simplifyDebtsPreferDirect,
+  validateSettlements,
+  waiveSubThresholdBalances,
+  MIN_SETTLEMENT_CENTS,
+  netsForSettlementSuggestions,
+} from "../debt-simplification";
 
 describe("simplifyDebts", () => {
   it("simplifies a 3-way equal split where payer is owed by two others", () => {
@@ -135,5 +142,37 @@ describe("simplifyDebtsPreferDirect", () => {
     expect(simplifyDebtsPreferDirect(netBalances, directDebts)).toEqual([
       { fromUserId: "anuraag", toUserId: "niranjan", amount: 45 },
     ]);
+  });
+});
+
+describe("waiveSubThresholdBalances", () => {
+  it("folds tiny creditor balance into debtor so one payment remains", () => {
+    const nets = [
+      { userId: "sanju", amount: 5093 },
+      { userId: "niranjan", amount: 8 },
+      { userId: "manish", amount: -493 },
+    ];
+
+    const waived = waiveSubThresholdBalances(nets);
+    const settlements = simplifyDebts(waived);
+
+    expect(waived.find((b) => b.userId === "niranjan")).toBeUndefined();
+    expect(settlements).toEqual([{ fromUserId: "manish", toUserId: "sanju", amount: 485 }]);
+  });
+
+  it("clears remaining micro-debt after a large partial payment", () => {
+    const nets = [{ userId: "sanju", amount: 4608 }, { userId: "manish", amount: -8 }];
+    const waived = netsForSettlementSuggestions(nets);
+
+    expect(waived.find((b) => b.userId === "manish")).toBeUndefined();
+    expect(simplifyDebts(waived)).toEqual([]);
+  });
+
+  it("does not waive balances at or above the threshold", () => {
+    const nets = [
+      { userId: "alice", amount: 100 },
+      { userId: "bob", amount: -100 },
+    ];
+    expect(waiveSubThresholdBalances(nets, MIN_SETTLEMENT_CENTS)).toEqual(nets);
   });
 });

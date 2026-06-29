@@ -155,6 +155,8 @@ export type SettlementResponse = {
   transactionCount: number;
   rawDebtCount: number;
   paymentsSaved: number;
+  minSettlementCents?: number;
+  settlementPlanLocked?: boolean;
   modes: Record<SettlementModeKey, SettlementModeResult>;
 };
 

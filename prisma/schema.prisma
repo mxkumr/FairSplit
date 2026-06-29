@@ -105,6 +105,8 @@ model Group {
   currency        String               @default("USD")
   currencySymbol  String               @default("$") @map("currency_symbol")
   settlementMode  GroupSettlementMode  @default(DIRECT) @map("settlement_mode")
+  settlementPlanFingerprint String?      @map("settlement_plan_fingerprint")
+  settlementPlan            Json?        @map("settlement_plan")
   inviteToken     String?              @unique @map("invite_token")
   createdByUserId String               @map("created_by")
   createdAt       DateTime             @default(now()) @map("created_at")

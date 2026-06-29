@@ -20,6 +20,61 @@ export type SettlementModeKey = "simplified" | "direct";
 /** Tolerance for cent rounding when validating settlement totals. */
 export const SETTLEMENT_TOLERANCE_CENTS = 1;
 
+/** Skip suggested payments below this amount (e.g. €0.10) to avoid awkward micro-transfers. */
+export const MIN_SETTLEMENT_CENTS = 10;
+
+/**
+ * Treat tiny net balances as settled by folding them into the nearest larger
+ * balance on the opposite side. Keeps group nets summing to zero.
+ */
+export function waiveSubThresholdBalances(
+  netBalances: NetBalance[],
+  minCents = MIN_SETTLEMENT_CENTS,
+): NetBalance[] {
+  if (minCents <= 0) {
+    return netBalances.map((balance) => ({ ...balance }));
+  }
+
+  const balances = netBalances.map((balance) => ({ ...balance }));
+
+  for (let pass = 0; pass < balances.length + 1; pass++) {
+    let changed = false;
+
+    for (const balance of balances) {
+      if (balance.amount === 0 || Math.abs(balance.amount) >= minCents) continue;
+
+      const delta = balance.amount;
+      balance.amount = 0;
+      changed = true;
+
+      const opposite = balances
+        .filter(
+          (candidate) =>
+            candidate.amount !== 0 && Math.sign(candidate.amount) !== Math.sign(delta),
+        )
+        .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+
+      if (opposite.length > 0) {
+        opposite[0].amount += delta;
+      }
+    }
+
+    if (!changed) break;
+  }
+
+  return balances.filter((balance) => balance.amount !== 0);
+}
+
+/**
+ * Nets prepared for settlement suggestions (small balances waived).
+ */
+export function netsForSettlementSuggestions(
+  netBalances: NetBalance[],
+  minCents = MIN_SETTLEMENT_CENTS,
+): NetBalance[] {
+  return waiveSubThresholdBalances(netBalances, minCents);
+}
+
 function mergeSettlements(settlements: Settlement[]): Settlement[] {
   const map = new Map<string, Settlement>();
   for (const settlement of settlements) {
