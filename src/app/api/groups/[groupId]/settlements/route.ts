@@ -137,7 +137,7 @@ export async function GET(_request: Request, context: RouteContext) {
       select: { currencySymbol: true, settlementMode: true },
     });
     const currencySymbol = group?.currencySymbol ?? "$";
-    const defaultMode = toSettlementModeKey(group?.settlementMode ?? "SIMPLIFIED");
+    const defaultMode = toSettlementModeKey(group?.settlementMode ?? "DIRECT");
 
     const { debts, netBalances } = computeGroupBalances(expenses, payments);
     const nets = netBalances.map((balance) => ({

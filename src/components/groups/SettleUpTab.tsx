@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, CheckCircle, ChevronDown, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ import { EditPaymentDialog } from "@/components/payments/EditPaymentDialog";
 import { PaymentMethodFields } from "@/components/payments/PaymentMethodFields";
 import { buildPayerSettlementSummary } from "@/lib/balance-explanation";
 import { buildPaymentNote, DEFAULT_PAYMENT_METHOD, type PaymentMethod } from "@/lib/payment-methods";
-import { useDeletePayment, useRecordPayment } from "@/hooks/use-api";
+import { useDeletePayment, useRecordPayment, useUpdateGroup } from "@/hooks/use-api";
 import { formatCents, parseDollarsToCents } from "@/lib/money";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import { cn } from "@/lib/utils";
@@ -291,10 +291,14 @@ export function SettleUpTab({
   const { currencySymbol } = useGroupCurrency();
   const recordPayment = useRecordPayment(groupId);
   const deletePayment = useDeletePayment(groupId);
-  const [simplifyEnabled, setSimplifyEnabled] = useState(
-    (defaultSettlementMode ?? settlements.defaultMode ?? "simplified") === "simplified",
-  );
+  const updateGroup = useUpdateGroup(groupId);
+  const resolvedMode = defaultSettlementMode ?? settlements.defaultMode ?? "direct";
+  const [simplifyEnabled, setSimplifyEnabled] = useState(resolvedMode === "simplified");
   const settlementMode = settlementModeFromSwitch(simplifyEnabled);
+
+  useEffect(() => {
+    setSimplifyEnabled(resolvedMode === "simplified");
+  }, [resolvedMode]);
   const [expandedPayerId, setExpandedPayerId] = useState<string | null>(null);
   const [recording, setRecording] = useState<{
     fromUserId: string;
@@ -351,6 +355,19 @@ export function SettleUpTab({
     setPaymentMethod(DEFAULT_PAYMENT_METHOD);
     setNote("");
     setError(null);
+  }
+
+  function handleSimplifyChange(enabled: boolean) {
+    const previous = simplifyEnabled;
+    setSimplifyEnabled(enabled);
+    setHasToggledExpand(false);
+    setExpandedPayerId(null);
+    updateGroup.mutate(
+      { settlementMode: settlementModeFromSwitch(enabled) },
+      {
+        onError: () => setSimplifyEnabled(previous),
+      },
+    );
   }
 
   async function handleRecord(e: React.FormEvent) {
@@ -419,11 +436,8 @@ export function SettleUpTab({
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <SimplifyDebtsSwitch
                     enabled={simplifyEnabled}
-                    onChange={(enabled) => {
-                      setSimplifyEnabled(enabled);
-                      setHasToggledExpand(false);
-                      setExpandedPayerId(null);
-                    }}
+                    onChange={handleSimplifyChange}
+                    className={updateGroup.isPending ? "opacity-60 pointer-events-none" : undefined}
                   />
                   <span className="text-xs text-muted-foreground">
                     {simplifyEnabled ? "On" : "Off"}
