@@ -165,8 +165,8 @@ docs/legal/         # Privacy policy & terms references
 
 Found a bug or have an idea? Use the GitHub issue templates (a GitHub account is required):
 
-- **[Report a bug](https://github.com/mxkumr/FairSplit/issues/new?template=bug_report.yml)** — steps to reproduce, expected vs actual behavior, and context (e.g. Settle up / Simplify debts)
-- **[Send feedback](https://github.com/mxkumr/FairSplit/issues/new?template=feedback.yml)** — feature ideas, UX suggestions, or questions
+- **[Report a bug](https://github.com/mxkumr/FairSplit/issues/new?template=bug_report.yml)** - steps to reproduce, expected vs actual behavior, and context (e.g. Settle up / Simplify debts)
+- **[Send feedback](https://github.com/mxkumr/FairSplit/issues/new?template=feedback.yml)** - feature ideas, UX suggestions, or questions
 
 The live app footer also links to these templates. Please search [existing issues](https://github.com/mxkumr/FairSplit/issues) first to avoid duplicates.
 

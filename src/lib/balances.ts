@@ -54,6 +54,36 @@ function applyDebt(
   const reverse = debtMap.get(reverseKey) ?? 0;
 
   if (forward > 0) {
+    const net = forward + amount;
+    debtMap.set(forwardKey, net);
+  } else if (reverse > 0) {
+    const net = reverse - amount;
+    if (net > 0) {
+      debtMap.set(reverseKey, net);
+    } else {
+      debtMap.delete(reverseKey);
+      if (net < 0) debtMap.set(forwardKey, Math.abs(net));
+    }
+  } else {
+    debtMap.set(forwardKey, amount);
+  }
+}
+
+/** Reduces pairwise debt when a payment is recorded (including simplified routes). */
+function applyPaymentToDebtMap(
+  debtMap: Map<string, number>,
+  fromUserId: string,
+  toUserId: string,
+  amount: number,
+) {
+  if (fromUserId === toUserId || amount === 0) return;
+
+  const forwardKey = `${fromUserId}:${toUserId}`;
+  const reverseKey = `${toUserId}:${fromUserId}`;
+  const forward = debtMap.get(forwardKey) ?? 0;
+  const reverse = debtMap.get(reverseKey) ?? 0;
+
+  if (forward > 0) {
     const net = forward - amount;
     if (net > 0) {
       debtMap.set(forwardKey, net);
@@ -62,9 +92,15 @@ function applyDebt(
       if (net < 0) debtMap.set(reverseKey, Math.abs(net));
     }
   } else if (reverse > 0) {
-    debtMap.set(reverseKey, reverse + amount);
+    const net = reverse - amount;
+    if (net > 0) {
+      debtMap.set(reverseKey, net);
+    } else {
+      debtMap.delete(reverseKey);
+      if (net < 0) debtMap.set(forwardKey, Math.abs(net));
+    }
   } else {
-    debtMap.set(forwardKey, amount);
+    debtMap.set(reverseKey, amount);
   }
 }
 
@@ -104,7 +140,7 @@ export function computeGroupBalances(
     const toNet = netMap.get(payment.toUserId) ?? 0;
     netMap.set(payment.toUserId, toNet - payment.amount);
 
-    applyDebt(debtMap, payment.fromUserId, payment.toUserId, payment.amount);
+    applyPaymentToDebtMap(debtMap, payment.fromUserId, payment.toUserId, payment.amount);
   }
 
   const debts: DebtEntry[] = [];
@@ -182,6 +218,11 @@ export function computeDashboardBalance(
       groupName: group.groupName,
       netAmount,
     });
+
+    // Raw pairwise debts can linger after simplified settlements even when the
+    // member's net in this group is zero. Only show friend breakdown for groups
+    // where the user still has an outstanding net balance.
+    if (netAmount === 0) continue;
 
     for (const debt of group.debts) {
       if (debt.toUserId === userId) {
