@@ -5,9 +5,39 @@ import { handleApiError, jsonError } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 
+function isLikelyConnectionError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("terminating connection") ||
+    message.includes("can't reach database") ||
+    message.includes("connection") ||
+    message.includes("timed out") ||
+    message.includes("p1001") ||
+    message.includes("p1017")
+  );
+}
+
+async function findUserByEmail(email: string) {
+  try {
+    return await prisma.user.findUnique({ where: { email } });
+  } catch (error) {
+    if (!isLikelyConnectionError(error)) throw error;
+    // Supabase/pgbouncer sometimes kills idle connections; one reconnect usually clears it.
+    await prisma.$connect();
+    return prisma.user.findUnique({ where: { email } });
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return jsonError("Invalid request body", 400);
+    }
+
     const parsed = loginSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -16,7 +46,7 @@ export async function POST(request: Request) {
 
     const email = parsed.data.email.trim().toLowerCase();
     const { password } = parsed.data;
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await findUserByEmail(email);
 
     if (!user) {
       return jsonError("Invalid email or password", 401);

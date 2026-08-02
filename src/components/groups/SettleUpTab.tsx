@@ -21,7 +21,7 @@ import { PaymentMethodFields } from "@/components/payments/PaymentMethodFields";
 import { buildPayerSettlementSummary } from "@/lib/balance-explanation";
 import { buildPaymentNote, DEFAULT_PAYMENT_METHOD, type PaymentMethod } from "@/lib/payment-methods";
 import { useDeletePayment, useRecordPayment, useUpdateGroup } from "@/hooks/use-api";
-import { formatCents, parseDollarsToCents } from "@/lib/money";
+import { formatCents, parseDollarsToCents, sanitizeMoneyInput } from "@/lib/money";
 import { useGroupCurrency } from "@/components/groups/GroupCurrencyContext";
 import { cn } from "@/lib/utils";
 import type { AuthUser, BalanceResponse, ExpenseItem, PaymentItem, SettlementItem, SettlementModeKey, SettlementResponse } from "@/lib/api-client";
@@ -516,7 +516,7 @@ export function SettleUpTab({
                 id="payment-amount"
                 inputMode="decimal"
                 value={amountInput}
-                onChange={(e) => setAmountInput(e.target.value)}
+                onChange={(e) => setAmountInput(sanitizeMoneyInput(e.target.value))}
               />
               {recording && (
                 <p className="text-xs text-muted-foreground">

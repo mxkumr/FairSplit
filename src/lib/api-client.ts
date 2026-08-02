@@ -14,7 +14,18 @@ export class ApiError extends Error {
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
-  const data = await response.json();
+  let data: { error?: string; code?: string; email?: string } = {};
+  try {
+    data = await response.json();
+  } catch {
+    if (!response.ok) {
+      throw new ApiError(
+        response.status >= 500 ? "Internal server error" : "Request failed",
+        response.status,
+      );
+    }
+    throw new ApiError("Invalid server response", response.status);
+  }
   if (!response.ok) {
     throw new ApiError(data.error ?? "Request failed", response.status, {
       code: data.code,

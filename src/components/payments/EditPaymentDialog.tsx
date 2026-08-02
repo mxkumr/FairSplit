@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PaymentMethodFields } from "@/components/payments/PaymentMethodFields";
 import { useUpdatePayment } from "@/hooks/use-api";
-import { formatCents, parseDollarsToCents } from "@/lib/money";
+import { formatCents, parseDollarsToCents, sanitizeMoneyInput } from "@/lib/money";
 import {
   buildPaymentNote,
   DEFAULT_PAYMENT_METHOD,
@@ -145,7 +145,7 @@ export function EditPaymentDialog({
                 id="edit-payment-amount"
                 inputMode="decimal"
                 value={amountInput}
-                onChange={(e) => setAmountInput(e.target.value)}
+                onChange={(e) => setAmountInput(sanitizeMoneyInput(e.target.value))}
               />
               <p className="text-xs text-muted-foreground">
                 Max: {formatCents(maxAmount, currencySymbol)}

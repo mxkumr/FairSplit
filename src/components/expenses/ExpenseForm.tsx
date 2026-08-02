@@ -16,6 +16,7 @@ import { api, type ExpensePayload } from "@/lib/api-client";
 import {
   formatCents,
   parseDollarsToCents,
+  sanitizeMoneyInput,
   splitByPercentages,
   splitByShares,
   splitEqually,
@@ -30,6 +31,8 @@ type SplitEntry = {
   percentage: number;
   shares: number;
   enabled: boolean;
+  /** Draft text for unequal splits so users can type "1." / "1,5" without it being wiped. */
+  amountInput: string;
 };
 
 const MODE_MAP: Record<UiSplitMode, string> = {
@@ -96,9 +99,11 @@ export function ExpenseForm({
     setSplits(
       members.map((m) => {
         const existing = initial?.splits.find((s) => s.userId === m.id);
+        const amountOwed = existing?.amountOwed ?? 0;
         return {
           userId: m.id,
-          amountOwed: existing?.amountOwed ?? 0,
+          amountOwed,
+          amountInput: amountOwed > 0 ? (amountOwed / 100).toFixed(2) : "",
           percentage:
             existing && initial
               ? Math.round((existing.amountOwed / initial.amount) * 100)
@@ -126,9 +131,14 @@ export function ExpenseForm({
     const equalSplits = splitEqually(amountCents, userIds);
     setSplits((prev) =>
       prev.map((s) => {
+        if (!s.enabled) return { ...s, amountOwed: 0, amountInput: "" };
         const match = equalSplits.find((e) => e.userId === s.userId);
-        if (!s.enabled) return { ...s, amountOwed: 0 };
-        return { ...s, amountOwed: match?.amountOwed ?? 0 };
+        const amountOwed = match?.amountOwed ?? 0;
+        return {
+          ...s,
+          amountOwed,
+          amountInput: amountOwed > 0 ? (amountOwed / 100).toFixed(2) : "",
+        };
       }),
     );
   }, [splitMode, amountCents, enabledUserIds]);
@@ -140,9 +150,14 @@ export function ExpenseForm({
     const shareSplits = splitByShares(amountCents, entries);
     setSplits((prev) =>
       prev.map((s) => {
+        if (!s.enabled) return { ...s, amountOwed: 0, amountInput: "" };
         const match = shareSplits.find((e) => e.userId === s.userId);
-        if (!s.enabled) return { ...s, amountOwed: 0 };
-        return { ...s, amountOwed: match?.amountOwed ?? 0 };
+        const amountOwed = match?.amountOwed ?? 0;
+        return {
+          ...s,
+          amountOwed,
+          amountInput: amountOwed > 0 ? (amountOwed / 100).toFixed(2) : "",
+        };
       }),
     );
   }, [splitMode, amountCents, enabledUserIds, enabledSplits.map((s) => s.shares).join(",")]);
@@ -155,9 +170,14 @@ export function ExpenseForm({
     );
     setSplits((prev) =>
       prev.map((s) => {
+        if (!s.enabled) return { ...s, amountOwed: 0, amountInput: "" };
         const match = pctSplits.find((e) => e.userId === s.userId);
-        if (!s.enabled) return { ...s, amountOwed: 0 };
-        return { ...s, amountOwed: match?.amountOwed ?? 0 };
+        const amountOwed = match?.amountOwed ?? 0;
+        return {
+          ...s,
+          amountOwed,
+          amountInput: amountOwed > 0 ? (amountOwed / 100).toFixed(2) : "",
+        };
       }),
     );
   }, [splitMode, amountCents, percentageTotal, enabledUserIds]);
@@ -172,10 +192,13 @@ export function ExpenseForm({
     );
   }
 
-  function updateSplitAmount(userId: string, dollars: string) {
-    const cents = parseDollarsToCents(dollars) ?? 0;
+  function updateSplitAmount(userId: string, raw: string) {
+    const amountInput = sanitizeMoneyInput(raw);
+    const cents = parseDollarsToCents(amountInput) ?? 0;
     setSplits((prev) =>
-      prev.map((s) => (s.userId === userId ? { ...s, amountOwed: cents } : s)),
+      prev.map((s) =>
+        s.userId === userId ? { ...s, amountInput, amountOwed: cents } : s,
+      ),
     );
   }
 
@@ -263,7 +286,7 @@ export function ExpenseForm({
             inputMode="decimal"
             placeholder="0.00"
             value={amountInput}
-            onChange={(e) => setAmountInput(e.target.value)}
+            onChange={(e) => setAmountInput(sanitizeMoneyInput(e.target.value))}
           />
         </div>
         <div className="space-y-2">
@@ -383,9 +406,7 @@ export function ExpenseForm({
                     className="w-24 h-9"
                     inputMode="decimal"
                     placeholder="0.00"
-                    value={
-                      split.amountOwed > 0 ? (split.amountOwed / 100).toFixed(2) : ""
-                    }
+                    value={split.amountInput}
                     onChange={(e) => updateSplitAmount(split.userId, e.target.value)}
                   />
                 )}
