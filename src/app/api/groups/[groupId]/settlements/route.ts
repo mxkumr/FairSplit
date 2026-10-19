@@ -33,6 +33,24 @@ type DebtEntry = {
 type ExpenseForExplanation = Parameters<typeof buildUserBalanceExplanation>[1];
 type PaymentForExplanation = Parameters<typeof buildUserBalanceExplanation>[2];
 
+function collectUsersFromActivity(
+  expenses: ExpenseForExplanation,
+  payments: PaymentForExplanation,
+): Map<string, AuthUser> {
+  const userMap = new Map<string, AuthUser>();
+  for (const expense of expenses) {
+    userMap.set(expense.paidBy.id, expense.paidBy);
+    for (const split of expense.splits) {
+      userMap.set(split.user.id, split.user);
+    }
+  }
+  for (const payment of payments) {
+    userMap.set(payment.fromUser.id, payment.fromUser);
+    userMap.set(payment.toUser.id, payment.toUser);
+  }
+  return userMap;
+}
+
 function enrichSettlements(
   rawSettlements: Settlement[],
   netBalances: BalanceEntry[],
@@ -41,7 +59,10 @@ function enrichSettlements(
   payments: PaymentForExplanation,
   currencySymbol: string,
 ) {
-  const userMap = new Map(netBalances.map((balance) => [balance.userId, balance.user]));
+  const userMap = collectUsersFromActivity(expenses, payments);
+  for (const balance of netBalances) {
+    userMap.set(balance.userId, balance.user);
+  }
   const explanationCache = new Map<
     string,
     ReturnType<typeof buildUserBalanceExplanation>
@@ -59,11 +80,14 @@ function enrichSettlements(
     return cached;
   }
 
-  return rawSettlements.map((settlement) => {
+  const enriched = [];
+  for (const settlement of rawSettlements) {
     const fromUser = userMap.get(settlement.fromUserId);
     const toUser = userMap.get(settlement.toUserId);
+    // Locked plans can briefly reference users who already netted to zero.
+    // Skip instead of failing the whole settlements response.
     if (!fromUser || !toUser) {
-      throw new Error("Missing user in settlement");
+      continue;
     }
 
     const payerNet =
@@ -86,13 +110,14 @@ function enrichSettlements(
       currencySymbol,
     });
 
-    return {
+    enriched.push({
       ...settlement,
       fromUser,
       toUser,
       explanation: { lines, summary },
-    };
-  });
+    });
+  }
+  return enriched;
 }
 
 function buildModeResult(

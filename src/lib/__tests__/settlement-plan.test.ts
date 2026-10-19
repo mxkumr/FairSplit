@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyPaymentsToLockedPlan,
   computeExpenseFingerprint,
+  pruneSettlementsToOutstandingNets,
   resolveSettlementPlanState,
 } from "../settlement-plan";
 
@@ -184,6 +185,22 @@ describe("resolveSettlementPlanState", () => {
     ]);
     // Live residual is not persisted (would double-count on next read).
     expect(resolved.planToPersist).toBeNull();
+  });
+
+  it("prunes locked routes that involve already-settled users", () => {
+    const pruned = pruneSettlementsToOutstandingNets(
+      [
+        { fromUserId: "settled", toUserId: "creditor", amount: 100 },
+        { fromUserId: "debtor", toUserId: "creditor", amount: 500 },
+        { fromUserId: "debtor", toUserId: "alsoSettled", amount: 50 },
+      ],
+      [
+        { userId: "creditor", amount: 500 },
+        { userId: "debtor", amount: -500 },
+      ],
+    );
+
+    expect(pruned).toEqual([{ fromUserId: "debtor", toUserId: "creditor", amount: 500 }]);
   });
 
   it("builds expense-only plan on first lock when fingerprint is missing", () => {

@@ -128,6 +128,37 @@ export function buildSettlementPlanFromNets(
   };
 }
 
+/**
+ * Drop locked routes that no longer match outstanding nets (e.g. a participant
+ * already settled to zero via other payments) and cap amounts to remaining debt.
+ */
+export function pruneSettlementsToOutstandingNets(
+  settlements: Settlement[],
+  nets: NetBalance[],
+): Settlement[] {
+  const remaining = new Map(nets.map((balance) => [balance.userId, balance.amount]));
+  const pruned: Settlement[] = [];
+
+  for (const settlement of settlements) {
+    const fromNet = remaining.get(settlement.fromUserId) ?? 0;
+    const toNet = remaining.get(settlement.toUserId) ?? 0;
+    if (fromNet >= 0 || toNet <= 0 || settlement.amount <= 0) continue;
+
+    const amount = Math.min(settlement.amount, Math.abs(fromNet), toNet);
+    if (amount <= 0) continue;
+
+    pruned.push({
+      fromUserId: settlement.fromUserId,
+      toUserId: settlement.toUserId,
+      amount,
+    });
+    remaining.set(settlement.fromUserId, fromNet + amount);
+    remaining.set(settlement.toUserId, toNet - amount);
+  }
+
+  return pruned.sort((a, b) => b.amount - a.amount);
+}
+
 function hasOutstandingNets(nets: NetBalance[]): boolean {
   return nets.some((balance) => balance.amount !== 0);
 }
@@ -193,15 +224,24 @@ export function resolveSettlementPlanState(params: {
     planRefreshed = true;
   }
 
-  let simplified = applyPaymentsToLockedPlan(plan.simplified, params.payments);
-  let direct = applyPaymentsToLockedPlan(plan.direct, params.payments);
+  let simplified = pruneSettlementsToOutstandingNets(
+    applyPaymentsToLockedPlan(plan.simplified, params.payments),
+    params.settlementNets,
+  );
+  let direct = pruneSettlementsToOutstandingNets(
+    applyPaymentsToLockedPlan(plan.direct, params.payments),
+    params.settlementNets,
+  );
 
   if (hasOutstandingNets(params.settlementNets) && simplified.length === 0) {
-    const healedSimplified = applyPaymentsToLockedPlan(
-      expenseOnlyPlan.simplified,
-      params.payments,
+    const healedSimplified = pruneSettlementsToOutstandingNets(
+      applyPaymentsToLockedPlan(expenseOnlyPlan.simplified, params.payments),
+      params.settlementNets,
     );
-    const healedDirect = applyPaymentsToLockedPlan(expenseOnlyPlan.direct, params.payments);
+    const healedDirect = pruneSettlementsToOutstandingNets(
+      applyPaymentsToLockedPlan(expenseOnlyPlan.direct, params.payments),
+      params.settlementNets,
+    );
 
     if (healedSimplified.length > 0) {
       // Stored plan was likely locked from post-payment nets (double-count).
@@ -220,6 +260,16 @@ export function resolveSettlementPlanState(params: {
         planToPersist = expenseOnlyPlan;
         planRefreshed = true;
       }
+    }
+  }
+
+  // Direct mode can still be empty after pruning stale locked edges while nets remain.
+  if (hasOutstandingNets(params.settlementNets) && direct.length === 0) {
+    const live = buildSettlementPlanFromNets(params.settlementNets, params.directDebts);
+    direct = live.direct;
+    if (simplified.length === 0) {
+      simplified = live.simplified;
+      usedLiveFallback = true;
     }
   }
 
