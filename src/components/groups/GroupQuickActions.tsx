@@ -50,16 +50,22 @@ export function GroupQuickActions({
           </p>
         </div>
       )}
-      {settlements && settlements.transactionCount > 0 && (
+      {settlements && (settlements.transactionCount > 0 || net !== 0) && (
         <div className="mt-4 rounded-2xl bg-brand/10 p-3 text-sm">
-          <p className="font-semibold text-brand">
-            {settlements.transactionCount} simplified payment
-            {settlements.transactionCount === 1 ? "" : "s"} to settle up
-          </p>
-          {settlements.paymentsSaved > 0 && (
-            <p className="mt-1 text-muted-foreground">
-              Saves {settlements.paymentsSaved} vs paying individually
-            </p>
+          {settlements.transactionCount > 0 ? (
+            <>
+              <p className="font-semibold text-brand">
+                {settlements.transactionCount} simplified payment
+                {settlements.transactionCount === 1 ? "" : "s"} to settle up
+              </p>
+              {settlements.paymentsSaved > 0 && (
+                <p className="mt-1 text-muted-foreground">
+                  Saves {settlements.paymentsSaved} vs paying individually
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="font-semibold text-brand">Settle up your balance</p>
           )}
           <button
             type="button"

@@ -472,7 +472,9 @@ export function SettleUpTab({
         {isEmpty ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
-              All settled up! No payments needed.
+              {balances.netBalances.some((balance) => balance.amount !== 0)
+                ? "Balances still look open. Try refreshing the page, or add/edit an expense to recalculate settle-up."
+                : "All settled up! No payments needed."}
             </CardContent>
           </Card>
         ) : (

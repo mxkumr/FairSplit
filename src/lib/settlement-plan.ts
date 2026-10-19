@@ -49,6 +49,10 @@ export function computeExpenseFingerprint(expenses: ExpenseForFingerprint[]): st
 /**
  * Reduce locked settlement amounts as payments are recorded.
  * Exact from→to matches are cleared first so payees stay stable.
+ *
+ * The locked plan must be built from expense-only nets (before payments).
+ * Applying payments to a plan already computed from post-payment nets
+ * double-counts and can empty settle-up while balances still show debt.
  */
 export function applyPaymentsToLockedPlan(
   locked: Settlement[],
@@ -114,38 +118,147 @@ export function parseStoredSettlementPlan(value: unknown): StoredSettlementPlan 
   };
 }
 
+export function buildSettlementPlanFromNets(
+  settlementNets: NetBalance[],
+  directDebts: DirectDebt[],
+): StoredSettlementPlan {
+  return {
+    simplified: simplifyDebts(settlementNets),
+    direct: simplifyDebtsPreferDirect(settlementNets, directDebts),
+  };
+}
+
+function hasOutstandingNets(nets: NetBalance[]): boolean {
+  return nets.some((balance) => balance.amount !== 0);
+}
+
+function settlementKey(settlement: Settlement): string {
+  return `${settlement.fromUserId}:${settlement.toUserId}:${settlement.amount}`;
+}
+
+function plansEqual(a: StoredSettlementPlan, b: StoredSettlementPlan): boolean {
+  if (a.simplified.length !== b.simplified.length || a.direct.length !== b.direct.length) {
+    return false;
+  }
+  const simplifiedA = a.simplified.map(settlementKey).sort().join("|");
+  const simplifiedB = b.simplified.map(settlementKey).sort().join("|");
+  if (simplifiedA !== simplifiedB) return false;
+  const directA = a.direct.map(settlementKey).sort().join("|");
+  const directB = b.direct.map(settlementKey).sort().join("|");
+  return directA === directB;
+}
+
+/**
+ * Pure resolution of locked settlement suggestions.
+ *
+ * Locked plans are derived from expense-only nets, then reduced by recorded
+ * payments. If a stored plan was incorrectly locked from post-payment nets
+ * (empty suggestions while balances remain), rebuild from expense-only.
+ * If off-route payments still leave residual nets with no locked routes,
+ * fall back to live simplification of current nets (not persisted).
+ */
+export function resolveSettlementPlanState(params: {
+  expenses: ExpenseForFingerprint[];
+  payments: PaymentForPlan[];
+  /** Nets/debts from expenses only — used to lock the plan. */
+  expenseOnlySettlementNets: NetBalance[];
+  expenseOnlyDirectDebts: DirectDebt[];
+  /** Current nets/debts after payments — used for heal / live fallback. */
+  settlementNets: NetBalance[];
+  directDebts: DirectDebt[];
+  storedFingerprint: string | null;
+  storedPlan: unknown;
+}): {
+  simplified: Settlement[];
+  direct: Settlement[];
+  planToPersist: StoredSettlementPlan | null;
+  fingerprint: string;
+  planRefreshed: boolean;
+  usedLiveFallback: boolean;
+} {
+  const fingerprint = computeExpenseFingerprint(params.expenses);
+  const expenseOnlyPlan = buildSettlementPlanFromNets(
+    params.expenseOnlySettlementNets,
+    params.expenseOnlyDirectDebts,
+  );
+
+  let plan = parseStoredSettlementPlan(params.storedPlan);
+  let planToPersist: StoredSettlementPlan | null = null;
+  let planRefreshed = false;
+  let usedLiveFallback = false;
+
+  if (!plan || params.storedFingerprint !== fingerprint) {
+    plan = expenseOnlyPlan;
+    planToPersist = expenseOnlyPlan;
+    planRefreshed = true;
+  }
+
+  let simplified = applyPaymentsToLockedPlan(plan.simplified, params.payments);
+  let direct = applyPaymentsToLockedPlan(plan.direct, params.payments);
+
+  if (hasOutstandingNets(params.settlementNets) && simplified.length === 0) {
+    const healedSimplified = applyPaymentsToLockedPlan(
+      expenseOnlyPlan.simplified,
+      params.payments,
+    );
+    const healedDirect = applyPaymentsToLockedPlan(expenseOnlyPlan.direct, params.payments);
+
+    if (healedSimplified.length > 0) {
+      // Stored plan was likely locked from post-payment nets (double-count).
+      plan = expenseOnlyPlan;
+      planToPersist = expenseOnlyPlan;
+      planRefreshed = true;
+      simplified = healedSimplified;
+      direct = healedDirect;
+    } else {
+      // Off-route payments cleared locked routes; show live residual suggestions.
+      const live = buildSettlementPlanFromNets(params.settlementNets, params.directDebts);
+      simplified = live.simplified;
+      direct = live.direct;
+      usedLiveFallback = true;
+      if (!plansEqual(plan, expenseOnlyPlan)) {
+        planToPersist = expenseOnlyPlan;
+        planRefreshed = true;
+      }
+    }
+  }
+
+  return {
+    simplified,
+    direct,
+    planToPersist,
+    fingerprint,
+    planRefreshed,
+    usedLiveFallback,
+  };
+}
+
 export async function resolveLockedSettlementPlans(params: {
   groupId: string;
   expenses: ExpenseForFingerprint[];
   payments: PaymentForPlan[];
+  expenseOnlySettlementNets: NetBalance[];
+  expenseOnlyDirectDebts: DirectDebt[];
   settlementNets: NetBalance[];
   directDebts: DirectDebt[];
   storedFingerprint: string | null;
   storedPlan: unknown;
 }): Promise<{ simplified: Settlement[]; direct: Settlement[]; planRefreshed: boolean }> {
-  const fingerprint = computeExpenseFingerprint(params.expenses);
-  const parsed = parseStoredSettlementPlan(params.storedPlan);
-  let plan = parsed;
-  let planRefreshed = false;
+  const resolved = resolveSettlementPlanState(params);
 
-  if (!plan || params.storedFingerprint !== fingerprint) {
-    plan = {
-      simplified: simplifyDebts(params.settlementNets),
-      direct: simplifyDebtsPreferDirect(params.settlementNets, params.directDebts),
-    };
-    planRefreshed = true;
+  if (resolved.planToPersist) {
     await prisma.group.update({
       where: { id: params.groupId },
       data: {
-        settlementPlanFingerprint: fingerprint,
-        settlementPlan: plan,
+        settlementPlanFingerprint: resolved.fingerprint,
+        settlementPlan: resolved.planToPersist,
       },
     });
   }
 
   return {
-    simplified: applyPaymentsToLockedPlan(plan.simplified, params.payments),
-    direct: applyPaymentsToLockedPlan(plan.direct, params.payments),
-    planRefreshed,
+    simplified: resolved.simplified,
+    direct: resolved.direct,
+    planRefreshed: resolved.planRefreshed,
   };
 }

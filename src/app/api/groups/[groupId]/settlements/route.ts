@@ -145,12 +145,24 @@ export async function GET(_request: Request, context: RouteContext) {
     const defaultMode = toSettlementModeKey(group?.settlementMode ?? "DIRECT");
 
     const { debts, netBalances } = computeGroupBalances(expenses, payments);
+    const expenseOnlyBalances = computeGroupBalances(expenses, []);
     const nets = netBalances.map((balance) => ({
       userId: balance.userId,
       amount: balance.amount,
     }));
     const settlementNets = netsForSettlementSuggestions(nets);
+    const expenseOnlyNets = netsForSettlementSuggestions(
+      expenseOnlyBalances.netBalances.map((balance) => ({
+        userId: balance.userId,
+        amount: balance.amount,
+      })),
+    );
     const directDebts = debts.map((debt) => ({
+      fromUserId: debt.fromUserId,
+      toUserId: debt.toUserId,
+      amount: debt.amount,
+    }));
+    const expenseOnlyDirectDebts = expenseOnlyBalances.debts.map((debt) => ({
       fromUserId: debt.fromUserId,
       toUserId: debt.toUserId,
       amount: debt.amount,
@@ -183,6 +195,9 @@ export async function GET(_request: Request, context: RouteContext) {
         toUserId: payment.toUserId,
         amount: payment.amount,
       })),
+      // Lock against expense-only nets so applying payments does not double-count.
+      expenseOnlySettlementNets: expenseOnlyNets,
+      expenseOnlyDirectDebts,
       settlementNets,
       directDebts,
       storedFingerprint: group?.settlementPlanFingerprint ?? null,
