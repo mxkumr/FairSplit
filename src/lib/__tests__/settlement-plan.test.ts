@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { simplifyDebts, sumSettlementsForUser, validateSettlements } from "../debt-simplification";
 import {
   applyPaymentsToLockedPlan,
   computeExpenseFingerprint,
@@ -228,5 +229,60 @@ describe("resolveSettlementPlanState", () => {
     expect(resolved.simplified).toEqual([
       { fromUserId: "debtor", toUserId: "creditor", amount: 750 },
     ]);
+  });
+
+  it("supplements residual when off-route payments clear a second creditor's routes", () => {
+    // Dinner-style: Manish + Ahalya owed; Anuraag was locked to pay Ahalya but paid Manish.
+    const currentNets = [
+      { userId: "manish", amount: 8127 },
+      { userId: "ahalya", amount: 1836 },
+      { userId: "ria", amount: 21 },
+      { userId: "reshma", amount: -29 },
+      { userId: "anuraag", amount: -29 },
+      { userId: "devika", amount: -283 },
+      { userId: "kiruthi", amount: -1221 },
+      { userId: "karan", amount: -1222 },
+      { userId: "sanju", amount: -1484 },
+      { userId: "raveena", amount: -1484 },
+      { userId: "aparna", amount: -1693 },
+      { userId: "niranjan", amount: -2539 },
+    ];
+    const expenseOnlyNetsMulti = currentNets.map((balance) => ({ ...balance }));
+    const bump = (id: string, delta: number) => {
+      const row = expenseOnlyNetsMulti.find((balance) => balance.userId === id)!;
+      row.amount += delta;
+    };
+    bump("ria", -1557);
+    bump("manish", 1557);
+    bump("anuraag", -2860);
+    bump("manish", 2860);
+    bump("reshma", -1661);
+    bump("manish", 1661);
+
+    const locked = simplifyDebts(expenseOnlyNetsMulti);
+    const payments = [
+      { fromUserId: "ria", toUserId: "manish", amount: 1557 },
+      { fromUserId: "anuraag", toUserId: "manish", amount: 2860 },
+      { fromUserId: "reshma", toUserId: "manish", amount: 1661 },
+    ];
+    const fingerprint = computeExpenseFingerprint(expenses);
+
+    const resolved = resolveSettlementPlanState({
+      expenses,
+      payments,
+      expenseOnlySettlementNets: expenseOnlyNetsMulti,
+      expenseOnlyDirectDebts: [],
+      settlementNets: currentNets,
+      directDebts: [],
+      storedFingerprint: fingerprint,
+      storedPlan: { simplified: locked, direct: locked },
+    });
+
+    expect(sumSettlementsForUser(resolved.simplified, "ahalya", "to")).toBe(1836);
+    expect(sumSettlementsForUser(resolved.simplified, "manish", "to")).toBe(8127);
+    expect(validateSettlements(resolved.simplified, currentNets).valid).toBe(true);
+    expect(resolved.usedLiveFallback).toBe(true);
+    // Residual supplement is not written back into the locked plan.
+    expect(resolved.planToPersist).toBeNull();
   });
 });

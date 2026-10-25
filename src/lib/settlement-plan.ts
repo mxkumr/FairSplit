@@ -179,14 +179,95 @@ function plansEqual(a: StoredSettlementPlan, b: StoredSettlementPlan): boolean {
   return directA === directB;
 }
 
+function mergeSettlementLists(a: Settlement[], b: Settlement[]): Settlement[] {
+  const map = new Map<string, Settlement>();
+  for (const settlement of [...a, ...b]) {
+    const key = `${settlement.fromUserId}:${settlement.toUserId}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.amount += settlement.amount;
+    } else {
+      map.set(key, { ...settlement });
+    }
+  }
+  return [...map.values()].sort((left, right) => right.amount - left.amount);
+}
+
+/**
+ * Nets still open after applying suggested settlements (positive = still owed).
+ * Used to detect creditors/debtors the locked plan no longer covers — e.g. when
+ * an off-route payment cleared a debtor→creditor edge while other routes remain.
+ */
+export function residualNetsAfterSettlements(
+  nets: NetBalance[],
+  settlements: Settlement[],
+): NetBalance[] {
+  const remaining = new Map(nets.map((balance) => [balance.userId, balance.amount]));
+
+  for (const settlement of settlements) {
+    remaining.set(
+      settlement.fromUserId,
+      (remaining.get(settlement.fromUserId) ?? 0) + settlement.amount,
+    );
+    remaining.set(
+      settlement.toUserId,
+      (remaining.get(settlement.toUserId) ?? 0) - settlement.amount,
+    );
+  }
+
+  return [...remaining.entries()]
+    .filter(([, amount]) => amount !== 0)
+    .map(([userId, amount]) => ({ userId, amount }));
+}
+
+/**
+ * Keep stable locked routes, then cover any leftover nets with a live plan.
+ * Does not persist the supplement (would double-count on the next read).
+ */
+function supplementWithLiveResidual(
+  locked: Settlement[],
+  settlementNets: NetBalance[],
+  directDebts: DirectDebt[],
+): { settlements: Settlement[]; supplemented: boolean } {
+  const residual = residualNetsAfterSettlements(settlementNets, locked);
+  if (!hasOutstandingNets(residual)) {
+    return { settlements: locked, supplemented: false };
+  }
+
+  const live = buildSettlementPlanFromNets(residual, directDebts);
+  // Prefer the mode-matching list: caller picks simplified vs direct from `live`.
+  return {
+    settlements: mergeSettlementLists(locked, live.simplified),
+    supplemented: true,
+  };
+}
+
+function supplementDirectWithLiveResidual(
+  locked: Settlement[],
+  settlementNets: NetBalance[],
+  directDebts: DirectDebt[],
+): { settlements: Settlement[]; supplemented: boolean } {
+  const residual = residualNetsAfterSettlements(settlementNets, locked);
+  if (!hasOutstandingNets(residual)) {
+    return { settlements: locked, supplemented: false };
+  }
+
+  const live = buildSettlementPlanFromNets(residual, directDebts);
+  return {
+    settlements: mergeSettlementLists(locked, live.direct),
+    supplemented: true,
+  };
+}
+
 /**
  * Pure resolution of locked settlement suggestions.
  *
  * Locked plans are derived from expense-only nets, then reduced by recorded
  * payments. If a stored plan was incorrectly locked from post-payment nets
  * (empty suggestions while balances remain), rebuild from expense-only.
- * If off-route payments still leave residual nets with no locked routes,
- * fall back to live simplification of current nets (not persisted).
+ * If off-route payments clear some locked routes while others remain — leaving
+ * creditors like a second payer under-covered — supplement with a live plan
+ * over the residual nets (not persisted).
  */
 export function resolveSettlementPlanState(params: {
   expenses: ExpenseForFingerprint[];
@@ -269,6 +350,28 @@ export function resolveSettlementPlanState(params: {
     direct = live.direct;
     if (simplified.length === 0) {
       simplified = live.simplified;
+      usedLiveFallback = true;
+    }
+  }
+
+  // Off-route payments can clear one creditor's locked edges while leaving others.
+  // Supplement residual nets so every outstanding credit/debt still appears.
+  if (!usedLiveFallback) {
+    const simplifiedSupplement = supplementWithLiveResidual(
+      simplified,
+      params.settlementNets,
+      params.directDebts,
+    );
+    simplified = simplifiedSupplement.settlements;
+
+    const directSupplement = supplementDirectWithLiveResidual(
+      direct,
+      params.settlementNets,
+      params.directDebts,
+    );
+    direct = directSupplement.settlements;
+
+    if (simplifiedSupplement.supplemented || directSupplement.supplemented) {
       usedLiveFallback = true;
     }
   }
